@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Word Blaster">
+<meta name="theme-color" content="#050816">
+<title>Word Blaster Quest - Offline Family Words</title>
+<style>
+  :root{
+    --bg:#050816;
+    --panel:rgba(8,13,34,.86);
+    --panel2:rgba(255,255,255,.095);
+    --line:rgba(255,255,255,.16);
+    --text:#f8fafc;
+    --muted:#b7c5df;
+    --gold:#ffd166;
+    --cyan:#67e8f9;
+    --pink:#fb7185;
+    --green:#86efac;
+    --violet:#c4b5fd;
+    --orange:#fdba74;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    touch-action:none;user-select:none;
+  }
+  #wrap{position:fixed;inset:0;overflow:hidden;background:
+    radial-gradient(circle at 15% 20%,rgba(59,130,246,.34),transparent 28%),
+    radial-gradient(circle at 82% 12%,rgba(217,70,239,.18),transparent 30%),
+    radial-gradient(circle at 50% 105%,rgba(20,184,166,.18),transparent 40%),
+    linear-gradient(180deg,#071025,#020617 74%);
+  }
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
+  .screen{
+    position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;
+    background:linear-gradient(180deg,rgba(2,6,23,.86),rgba(2,6,23,.68));
+    backdrop-filter:blur(11px);
+  }
+  .hidden{display:none!important;}
+  .card{
+    width:min(1040px,96vw);max-height:94dvh;overflow:auto;background:linear-gradient(180deg,rgba(15,23,42,.92),rgba(15,23,42,.76));
+    border:1px solid var(--line);border-radius:28px;padding:22px;
+    box-shadow:0 26px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .logo{
+    font-weight:1000;letter-spacing:0;line-height:.92;font-size:clamp(34px,7vw,82px);margin:0;
+    text-shadow:0 0 22px rgba(103,232,249,.25),0 8px 0 rgba(2,6,23,.55);
+  }
+  h2{font-size:clamp(25px,4.5vw,46px);margin:0 0 12px;line-height:1.05;}
+  h3{margin:0 0 9px;font-size:19px;}
+  .subtitle{font-size:clamp(15px,2.4vw,21px);color:var(--muted);line-height:1.65;margin:14px 0 18px;}
+  .small{font-size:13px;color:var(--muted);line-height:1.65;}
+  .badgeRow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;}
+  .badge{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#dbeafe;padding:8px 11px;border-radius:999px;font-weight:850;font-size:13px;}
+  .btnRow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px;}
+  button{
+    border:0;border-radius:999px;padding:14px 20px;font-weight:1000;font-size:16px;cursor:pointer;
+    color:#020617;background:linear-gradient(180deg,#ffe9a8,#facc15);box-shadow:0 11px 30px rgba(250,204,21,.22);
+  }
+  button.secondary{color:var(--text);background:rgba(255,255,255,.11);border:1px solid var(--line);box-shadow:none;}
+  button.modeSelected{color:#020617;background:linear-gradient(180deg,#bbf7d0,#67e8f9);box-shadow:0 11px 30px rgba(103,232,249,.22);}
+  button.hardSelected{color:#020617;background:linear-gradient(180deg,#fecdd3,#fb7185);box-shadow:0 11px 30px rgba(251,113,133,.22);}
+  button:active{transform:translateY(1px) scale(.99);}
+  textarea{
+    width:100%;min-height:180px;resize:vertical;border-radius:18px;border:1px solid var(--line);
+    background:rgba(2,6,23,.62);color:var(--text);padding:14px;font-size:15px;line-height:1.55;
+    user-select:text;touch-action:auto;
+  }
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin:15px 0;}
+  .wordPill,.statPill{
+    border-radius:16px;padding:11px 12px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1);
+    display:flex;justify-content:space-between;gap:8px;color:#e2e8f0;font-weight:850;align-items:center;
+  }
+  .wordPill span:last-child{color:#bfdbfe;font-weight:1000;}
+  .statPill{display:block;}
+  .twoCol{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .threeCol{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .panel{border:1px solid var(--line);background:rgba(255,255,255,.07);border-radius:20px;padding:14px;}
+  .hud{position:absolute;inset:0;z-index:20;pointer-events:none;}
+  .topHud{
+    position:absolute;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;
+  }
+  .mission{
+    border:1px solid rgba(255,255,255,.16);background:rgba(4,12,31,.62);border-radius:21px;padding:10px 13px;
+    box-shadow:0 12px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .missionLabel{font-size:12px;color:#93c5fd;font-weight:1000;letter-spacing:0;}
+  #missionText{font-size:clamp(30px,7vw,68px);font-weight:1000;line-height:1.05;letter-spacing:0;}
+  #hintText{font-size:13px;color:#fef3c7;font-weight:1000;min-height:18px;margin-top:2px;}
+  .statBox{
+    min-width:154px;text-align:right;border:1px solid rgba(255,255,255,.16);background:rgba(4,12,31,.62);
+    border-radius:19px;padding:9px 11px;font-weight:1000;line-height:1.55;font-size:13px;
+  }
+  .meter{width:100%;height:8px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin-top:6px;}
+  #xpFill{height:100%;width:0%;background:linear-gradient(90deg,#67e8f9,#facc15);border-radius:999px;}
+  .toast{
+    position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) scale(.96);opacity:0;
+    transition:opacity .14s,transform .14s;text-align:center;font-weight:1000;font-size:clamp(24px,6vw,58px);
+    text-shadow:0 5px 28px rgba(0,0,0,.58);
+  }
+  .toast.show{opacity:1;transform:translate(-50%,-62%) scale(1);}
+  .bottomHud{
+    position:absolute;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));
+    display:flex;align-items:end;justify-content:space-between;gap:10px;color:rgba(255,255,255,.72);font-size:12px;
+  }
+  .hudButtons{display:flex;gap:8px;align-items:center;pointer-events:auto;}
+  .controlPad{display:none;pointer-events:auto;gap:10px;}
+  .roundBtn{
+    width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.13);font-weight:1000;
+    box-shadow:0 12px 30px rgba(0,0,0,.28);touch-action:none;
+  }
+  .fire{color:#020617;background:linear-gradient(180deg,#fef08a,#facc15);font-size:15px;}
+  .pauseBtn{
+    pointer-events:auto;border-radius:14px;padding:9px 12px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
+    color:var(--text);font-weight:900;box-shadow:none;font-size:13px;
+  }
+  .resultTitle{font-size:clamp(28px,5vw,56px);line-height:1;margin:0 0 10px;font-weight:1000;}
+  .scoreBig{font-size:clamp(42px,8vw,90px);font-weight:1000;color:#fde68a;line-height:1;}
+  .bonusBanner{
+    border:1px solid rgba(250,204,21,.35);background:linear-gradient(135deg,rgba(250,204,21,.16),rgba(103,232,249,.12));
+    border-radius:22px;padding:14px;margin:15px 0;box-shadow:0 0 30px rgba(250,204,21,.08);
+  }
+  .miniNote{font-size:12px;color:#bfdbfe;margin-top:8px;}
+  @media (max-width:760px){
+    .card{padding:18px;border-radius:23px;}
+    .topHud{grid-template-columns:1fr;gap:8px;}
+    .statBox{display:grid;grid-template-columns:repeat(3,auto);gap:6px 10px;justify-content:space-between;min-width:0;text-align:left;align-items:center;}
+    .statBox .meter{grid-column:1/-1;width:100%;margin:0;}
+    .controlPad{display:flex;}
+    .helpText{display:none;}
+    .twoCol,.threeCol{grid-template-columns:1fr;}
+    #missionText{font-size:clamp(30px,9vw,54px);}
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" aria-label="英語ことばトレーニング"></canvas>
+
+  <div class="hud">
+    <div class="topHud">
+      <div class="mission">
+        <div class="missionLabel" id="missionLabel">お題 / 意味に合う英語をうとう</div>
+        <div id="missionText">つま</div>
+        <div id="hintText"></div>
+      </div>
+      <div class="statBox">
+        <div>点 <span id="score">0</span></div>
+        <div>つづけて正解 <span id="combo">0</span></div>
+        <div>問題 <span id="stage">1</span>/<span id="total">14</span></div>
+        <div>あと <span id="shield">★★★</span></div>
+        <div>最高 <span id="bestScore">0</span></div>
+        <div>コイン <span id="coins">0</span></div>
+        <div class="meter"><div id="xpFill"></div></div>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div class="bottomHud">
+      <div class="hudButtons">
+        <button id="pauseBtn" class="pauseBtn">とめる</button>
+        <button id="voiceBtn" class="pauseBtn">音声オン</button>
+      </div>
+      <div class="helpText">パソコン: ← → / A D で動く、スペースでうつ　｜　スマホ: ボタンか指で動かす</div>
+      <div class="controlPad">
+        <div class="roundBtn" id="leftBtn">◀</div>
+        <div class="roundBtn fire" id="fireBtn">うつ</div>
+        <div class="roundBtn" id="rightBtn">▶</div>
+      </div>
+    </div>
+  </div>
+
+  <section id="startScreen" class="screen">
+    <div class="card">
+      <h1 class="logo">英語<br>ことば<br>トレーニング</h1>
+      <p class="subtitle">
+        家族や身近な人を表す英語を、絵を見ながら練習します。<br>
+        意味を見て、合う英語をうちます。
+      </p>
+      <div class="badgeRow">
+        <div class="badge">1つのファイルで使える</div>
+        <div class="badge">オフラインでもOK</div>
+        <div class="badge">絵でイメージ</div>
+        <div class="badge">かんたん / ふつう / チャレンジ</div>
+        <div class="badge">苦手をもう一度</div>
+        <div class="badge">英語と日本語の音声</div>
+      </div>
+      <div class="threeCol">
+        <div class="panel">
+          <h3>かんたん</h3>
+          <p class="small">正しい答えが色つきです。ゆっくり動きます。はじめてでも大丈夫です。</p>
+        </div>
+        <div class="panel">
+          <h3>ふつう</h3>
+          <p class="small">絵と意味を見て、自分で英語を選びます。</p>
+        </div>
+        <div class="panel">
+          <h3>チャレンジ</h3>
+          <p class="small">少し速くなります。慣れてきたら使ってください。</p>
+        </div>
+      </div>
+      <div class="btnRow">
+        <button id="playBtn">スタート</button>
+        <button id="beginnerBtn" class="secondary modeSelected">かんたん</button>
+        <button id="normalBtn" class="secondary">ふつう</button>
+        <button id="hardBtn" class="secondary">チャレンジ</button>
+        <button id="bonusHomeBtn" class="secondary hidden">ボーナス</button>
+        <button id="wordsBtn" class="secondary">ことば</button>
+        <button id="progressBtn" class="secondary">記録</button>
+      </div>
+      <p class="small">
+        Chromebookでは、ファイルをダウンロードしてから開くと使いやすいです。
+      </p>
+    </div>
+  </section>
+
+  <section id="wordsScreen" class="screen hidden">
+    <div class="card">
+      <h2>今日のことば</h2>
+      <div id="wordGrid" class="grid"></div>
+      <p class="small">ことばを入れかえるときは、1行に「英語,日本語」の形で入れます。</p>
+      <textarea id="wordInput"></textarea>
+      <div class="btnRow">
+        <button id="applyWordsBtn">これで始める</button>
+        <button id="resetWordsBtn" class="secondary">もとの14語にもどす</button>
+        <button id="backBtn" class="secondary">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="progressScreen" class="screen hidden">
+    <div class="card">
+      <h2>記録ともう一度</h2>
+      <div class="grid" id="progressGrid"></div>
+      <p class="small">まちがえたことばは、あとで出やすくなります。このパソコンの中だけに残ります。</p>
+      <div class="btnRow">
+        <button id="reviewWeakBtn">苦手だけ練習</button>
+        <button id="resetProgressBtn" class="secondary">記録を消す</button>
+        <button id="progressBackBtn" class="secondary">もどる</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pauseScreen" class="screen hidden">
+    <div class="card">
+      <h2>休けい</h2>
+      <p class="subtitle">少し止めています。つづきからできます。</p>
+      <div class="btnRow">
+        <button id="resumeBtn">つづける</button>
+        <button id="restartBtn" class="secondary">はじめから</button>
+        <button id="homeBtn" class="secondary">はじめの画面へ</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultScreen" class="screen hidden">
+    <div class="card">
+      <div class="resultTitle" id="rankTitle">クリア</div>
+      <div class="scoreBig" id="finalScore">0</div>
+      <p id="resultMessage" class="subtitle"></p>
+      <div id="bonusBanner" class="bonusBanner hidden">
+        <h3>ボーナスができます</h3>
+        <p class="small">30秒のボーナスです。絵と英語を見て、合う日本語をうちます。</p>
+        <button id="bonusBtn">ボーナスを始める</button>
+      </div>
+      <div class="twoCol">
+        <div class="panel">
+          <h3>できたこと</h3>
+          <p id="growthLog" class="small"></p>
+        </div>
+        <div class="panel">
+          <h3>もう一度練習することば</h3>
+          <div id="reviewGrid" class="grid"></div>
+        </div>
+      </div>
+      <div class="btnRow">
+        <button id="againBtn">もう一度</button>
+        <button id="reviewBtn" class="secondary">苦手だけ</button>
+        <button id="titleBtn" class="secondary">はじめの画面へ</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const DEFAULT_WORDS = [
+    ["wife","つま（妻）","partner-female"],
+    ["uncle","おじ","uncle"],
+    ["sister","女のきょうだい","sister"],
+    ["niece","めい","niece"],
+    ["mother","母","mother"],
+    ["husband","おっと（夫）","partner-male"],
+    ["grandson","男のまご","grandson"],
+    ["grandmother","おばあさん","grandmother"],
+    ["grandfather","おじいさん","grandfather"],
+    ["friend","友だち","friend"],
+    ["daughter","むすめ（娘）","daughter"],
+    ["cousin","いとこ","cousin"],
+    ["brother","男のきょうだい","brother"],
+    ["aunt","おば","aunt"]
+  ].map(([en,ja,theme])=>({en,ja,theme}));
+
+  const THEMES = {
+    "partner-female": {bg1:"#331131",bg2:"#7c2d12",accent:"#fb7185",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"wife",note:"married partner"},
+    "partner-male": {bg1:"#0b2447",bg2:"#14532d",accent:"#60a5fa",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"husband",note:"married partner"},
+    "uncle": {bg1:"#172554",bg2:"#92400e",accent:"#fdba74",accent2:"#93c5fd",icon:"adultChild",scene:"uncleAunt",focus:"uncle",note:"parent's brother"},
+    "aunt": {bg1:"#3b0764",bg2:"#9d174d",accent:"#f0abfc",accent2:"#facc15",icon:"adultChild",scene:"uncleAunt",focus:"aunt",note:"parent's sister"},
+    "sister": {bg1:"#312e81",bg2:"#be185d",accent:"#c4b5fd",accent2:"#f9a8d4",icon:"twoKids",scene:"siblings",focus:"sister",note:"girl siblings"},
+    "brother": {bg1:"#082f49",bg2:"#166534",accent:"#67e8f9",accent2:"#bef264",icon:"twoKids",scene:"siblings",focus:"brother",note:"boy siblings"},
+    "niece": {bg1:"#3b0764",bg2:"#7f1d1d",accent:"#f9a8d4",accent2:"#facc15",icon:"littleGirl",scene:"niece",focus:"niece",note:"sibling's daughter"},
+    "daughter": {bg1:"#1e1b4b",bg2:"#9f1239",accent:"#f9a8d4",accent2:"#86efac",icon:"parentKid",scene:"daughter",focus:"daughter",note:"my child"},
+    "mother": {bg1:"#064e3b",bg2:"#7c2d12",accent:"#86efac",accent2:"#fdba74",icon:"parentKid",scene:"mother",focus:"mother",note:"parent and child"},
+    "grandson": {bg1:"#0f172a",bg2:"#1d4ed8",accent:"#93c5fd",accent2:"#facc15",icon:"elderKid",scene:"grandson",focus:"grandson",note:"grandchild"},
+    "grandmother": {bg1:"#3b0764",bg2:"#713f12",accent:"#f0abfc",accent2:"#facc15",icon:"elder",scene:"grandparent",focus:"grandmother",note:"grandparent"},
+    "grandfather": {bg1:"#0f172a",bg2:"#854d0e",accent:"#fdba74",accent2:"#93c5fd",icon:"elder",scene:"grandparent",focus:"grandfather",note:"grandparent"},
+    "friend": {bg1:"#083344",bg2:"#4338ca",accent:"#67e8f9",accent2:"#facc15",icon:"friends",scene:"friends",focus:"friend",note:"friendship"},
+    "cousin": {bg1:"#052e16",bg2:"#1e3a8a",accent:"#bef264",accent2:"#93c5fd",icon:"tree",scene:"cousin",focus:"cousin",note:"same generation family"}
+  };
+
+  const RELATED_CHOICES = {
+    wife:["wife","husband","mother","daughter"],
+    husband:["husband","wife","mother","daughter"],
+    uncle:["uncle","aunt","mother","cousin","niece","brother"],
+    aunt:["aunt","uncle","mother","cousin","niece","sister"],
+    sister:["sister","brother","cousin","friend","daughter","niece"],
+    brother:["brother","sister","cousin","friend","grandson","uncle"],
+    niece:["niece","daughter","sister","brother","aunt","uncle","cousin"],
+    daughter:["daughter","mother","niece","sister","grandson"],
+    mother:["mother","daughter","grandmother","grandfather","aunt","uncle"],
+    grandson:["grandson","grandmother","grandfather","daughter","mother"],
+    grandmother:["grandmother","grandfather","grandson","mother"],
+    grandfather:["grandfather","grandmother","grandson","mother"],
+    friend:["friend","brother","sister","cousin"],
+    cousin:["cousin","aunt","uncle","brother","sister","niece"]
+  };
+
+  const $ = id => document.getElementById(id);
+  const canvas = $("game");
+  const ctx = canvas.getContext("2d");
+
+  const state = {
+    words: loadSavedWords() || DEFAULT_WORDS.slice(),
+    questions: [],
+    target: null,
+    index:0,
+    score:0,
+    combo:0,
+    bestCombo:0,
+    shield:3,
+    difficulty:"beginner",
+    mode:"main", // main, bonus
+    running:false,
+    paused:false,
+    dpr:1,W:0,H:0,
+    player:{x:0,y:0,w:48,h:40,speed:7},
+    keys:{},
+    touchDir:0,
+    enemies:[],
+    bullets:[],
+    particles:[],
+    stars:[],
+    rings:[],
+    wrongMap:{},
+    correctCount:0,
+    lastShot:0,
+    startRoundTime:0,
+    showHint:false,
+    shake:0,
+    toastUntil:0,
+    lastReviewWords:[],
+    bonusUnlocked:false,
+    bonusTimeLeft:30,
+    bonusTarget:null,
+    bonusLastTime:0,
+    progress: loadProgress()
+  };
+
+  const screens = ["startScreen","wordsScreen","progressScreen","pauseScreen","resultScreen"].map($);
+
+  function showScreen(id){
+    screens.forEach(s=>s.classList.add("hidden"));
+    if(id) $(id).classList.remove("hidden");
+  }
+
+  function resize(){
+    state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    state.W = innerWidth;
+    state.H = innerHeight;
+    canvas.width = Math.floor(state.W*state.dpr);
+    canvas.height = Math.floor(state.H*state.dpr);
+    canvas.style.width = state.W+"px";
+    canvas.style.height = state.H+"px";
+    ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
+    state.player.x = state.player.x || state.W/2;
+    state.player.y = state.H - Math.max(92, state.H*0.12);
+    makeStars();
+  }
+
+  function makeStars(){
+    const n = Math.max(80, Math.floor(state.W*state.H/8200));
+    state.stars = Array.from({length:n},()=>({
+      x:Math.random()*state.W,y:Math.random()*state.H,r:.4+Math.random()*1.7,s:.12+Math.random()*.7,tw:Math.random()*Math.PI*2
+    }));
+  }
+
+  function shuffle(arr){
+    const a=arr.slice();
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+
+  function parseWords(text){
+    return text.split(/\n+/).map(l=>l.trim()).filter(Boolean).map(line=>{
+      const parts=line.split(/[,，\t]/).map(s=>s.trim()).filter(Boolean);
+      if(parts.length<2) return null;
+      const known = DEFAULT_WORDS.find(w=>w.en.toLowerCase()===parts[0].toLowerCase());
+      return {en:parts[0], ja:parts.slice(1).join(" "), theme: known ? known.theme : "friend"};
+    }).filter(Boolean);
+  }
+
+  function normalizeWords(words){
+    const byEn=new Map(DEFAULT_WORDS.map(w=>[w.en,w]));
+    return words.map(w=>{
+      const known=byEn.get(String(w.en).toLowerCase());
+      if(known) return {en:known.en,ja:known.ja,theme:known.theme};
+      return {en:String(w.en),ja:String(w.ja),theme:w.theme||"friend"};
+    });
+  }
+
+  function saveWords(words){try{localStorage.setItem("wbqWords", JSON.stringify(words));}catch(e){}}
+  function loadSavedWords(){
+    try{
+      const raw=localStorage.getItem("wbqWords");
+      if(!raw) return null;
+      const parsed=JSON.parse(raw);
+      if(Array.isArray(parsed)&&parsed.length>=3) return normalizeWords(parsed);
+    }catch(e){}
+    return null;
+  }
+  function loadProgress(){
+    const base={coins:0,totalPlays:0,best:{beginner:0,normal:0,hard:0,bonus:0},weak:{},unlockedBonus:false};
+    try{
+      const raw=localStorage.getItem("wbqProgress");
+      if(!raw) return base;
+      return Object.assign(base, JSON.parse(raw));
+    }catch(e){return base;}
+  }
+  function saveProgress(){try{localStorage.setItem("wbqProgress", JSON.stringify(state.progress));}catch(e){}}
+
+  function setDifficulty(mode){
+    state.difficulty = mode;
+    $("beginnerBtn").classList.toggle("modeSelected", mode==="beginner");
+    $("normalBtn").classList.toggle("modeSelected", mode==="normal");
+    $("hardBtn").classList.toggle("hardSelected", mode==="hard");
+  }
+
+  function refreshWordUI(){
+    $("wordGrid").innerHTML="";
+    state.words.forEach(w=>{
+      const div=document.createElement("div");
+      div.className="wordPill";
+      div.innerHTML=`<span>${escapeHtml(w.ja)}</span><span>${escapeHtml(w.en)}</span>`;
+      $("wordGrid").appendChild(div);
+    });
+    $("wordInput").value=state.words.map(w=>`${w.en},${w.ja}`).join("\n");
+  }
+
+  function refreshProgressUI(){
+    $("progressGrid").innerHTML="";
+    const sorted=state.words.slice().sort((a,b)=>(state.progress.weak[b.en]||0)-(state.progress.weak[a.en]||0));
+    sorted.forEach(w=>{
+      const div=document.createElement("div");
+      div.className="statPill";
+      const weak=state.progress.weak[w.en]||0;
+      div.innerHTML=`<b>${escapeHtml(w.ja)} → ${escapeHtml(w.en)}</b><br><span class="small">もう一度: ${"★".repeat(Math.min(5,weak))}${"☆".repeat(Math.max(0,5-weak))}</span>`;
+      $("progressGrid").appendChild(div);
+    });
+    updateHomeUnlock();
+  }
+
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+  function updateHomeUnlock(){
+    const unlocked=state.progress.unlockedBonus || state.bonusUnlocked;
+    $("bonusHomeBtn").classList.toggle("hidden", !unlocked);
+    $("bestScore").textContent = state.progress.best[state.difficulty] || 0;
+    $("coins").textContent = state.progress.coins || 0;
+  }
+
+  function startGame(words){
+    state.mode="main";
+    state.words=(words&&words.length>=3?words:state.words).slice(0,30);
+    saveWords(state.words);
+    state.questions = weightedQuestions();
+    state.index=0; state.score=0; state.combo=0; state.bestCombo=0;
+    state.shield = state.difficulty==="hard" ? 2 : 3;
+    state.wrongMap={}; state.correctCount=0; state.player.x=state.W/2;
+    state.bullets=[];state.particles=[];state.rings=[];
+    state.running=true;state.paused=false;
+    $("missionLabel").textContent="お題 / 意味に合う英語をうとう";
+    showScreen(null);
+    nextRound();
+    updateHUD();
+  }
+
+  function weightedQuestions(){
+    // Weak words appear earlier but all words are still included when possible.
+    const base=state.words.slice();
+    const weak=state.progress.weak || {};
+    base.sort((a,b)=>(weak[b.en]||0)-(weak[a.en]||0)+Math.random()-.5);
+    const limit=Math.min(15,base.length);
+    return base.slice(0,limit);
+  }
+
+  function relatedChoicesFor(target,count){
+    if(!target) return [];
+    const byEn=new Map(state.words.map(w=>[w.en,w]));
+    const wanted=RELATED_CHOICES[target.en] || [target.en];
+    const picked=[];
+    wanted.forEach(en=>{const w=byEn.get(en);if(w&&!picked.includes(w))picked.push(w);});
+    if(!picked.includes(target)) picked.unshift(target);
+    return picked.slice(0,Math.max(1,count));
+  }
+
+  function modeSettings(){
+    if(state.difficulty==="beginner") return {choices:5,speed:.72,cardScale:1,showCorrectColor:true,hintDelay:6000,scoreMult:1,enemySize:1};
+    if(state.difficulty==="normal") return {choices:6,speed:1.05,cardScale:.96,showCorrectColor:false,hintDelay:999999,scoreMult:1.25,enemySize:.96};
+    return {choices:Math.min(8,state.words.length),speed:1.42,cardScale:.86,showCorrectColor:false,hintDelay:999999,scoreMult:1.65,enemySize:.88};
+  }
+
+  function nextRound(){
+    if(state.index>=state.questions.length){finishGame();return;}
+    state.target=state.questions[state.index];
+    state.startRoundTime=performance.now();
+    state.showHint=false;
+    state.bullets=[];
+    spawnEnemies();
+    updateHUD();
+  }
+
+  function spawnEnemies(){
+    const set=modeSettings();
+    const count=Math.min(state.words.length,set.choices);
+    const related=relatedChoicesFor(state.target,count);
+    const wrongs=shuffle(related.filter(w=>w.en!==state.target.en)).slice(0,count-1);
+    const choices=shuffle([state.target,...wrongs]);
+    const top=Math.max(145,state.H*.25);
+    const bottom=Math.max(top+90,state.H*.68);
+    state.enemies=choices.map(w=>{
+      const wordW=Math.min(190,Math.max(86,w.en.length*13.5+42))*set.enemySize;
+      const h=44*set.enemySize;
+      return {
+        word:w,x:42+Math.random()*Math.max(80,state.W-84),y:top+Math.random()*Math.max(70,bottom-top),
+        w:wordW,h:h,vx:(Math.random()<.5?-1:1)*(set.speed+Math.random()*1.1),vy:(Math.random()<.5?-1:1)*(set.speed*.42+Math.random()*.45),
+        rot:Math.random()*Math.PI*2,spin:(Math.random()<.5?-1:1)*(.006+Math.random()*.012),pulse:Math.random()*Math.PI*2,hit:false,wrongFlash:0,type:"word"
+      };
+    });
+  }
+
+  function updateHUD(){
+    if(state.mode==="bonus"){
+      $("missionLabel").textContent="ボーナス / 絵と英語に合う日本語をうとう";
+      $("missionText").textContent=state.bonusTarget ? state.bonusTarget.en : "ボーナス";
+      $("hintText").textContent=`あと ${Math.max(0,Math.ceil(state.bonusTimeLeft))} 秒`;
+      $("stage").textContent="ボ";
+      $("total").textContent="∞";
+    } else {
+      $("missionLabel").textContent="お題 / 意味に合う英語をうとう";
+      $("missionText").textContent=state.target ? state.target.ja : "準備";
+      if(state.target && state.showHint && state.difficulty==="beginner") $("hintText").textContent=`ヒント: ${state.target.en[0].toUpperCase()} から始まります`;
+      else if(state.difficulty==="beginner") $("hintText").textContent="かんたん: 正しい答えは色つき";
+      else if(state.difficulty==="normal") $("hintText").textContent="ふつう: 絵を見て選ぼう";
+      else $("hintText").textContent="チャレンジ: 少し速い";
+      $("stage").textContent=Math.min(state.index+1,state.questions.length);
+      $("total").textContent=state.questions.length || state.words.length;
+    }
+    $("score").textContent=state.score;
+    $("combo").textContent=state.combo;
+    $("shield").textContent="★".repeat(state.shield)+"☆".repeat(Math.max(0,3-state.shield));
+    $("xpFill").style.width = state.mode==="bonus" ? `${Math.max(0,Math.min(100,state.bonusTimeLeft/30*100))}%` : `${Math.round((state.index/Math.max(1,state.questions.length))*100)}%`;
+    updateHomeUnlock();
+  }
+
+  function shoot(){
+    if(!state.running||state.paused) return;
+    const now=performance.now();
+    if(now-state.lastShot<165) return;
+    state.lastShot=now;
+    state.bullets.push({x:state.player.x,y:state.player.y-28,r:5,vy:-10.8,life:90});
+    beep(540,.045,"square",.033);
+  }
+
+  function beep(freq=440,dur=.06,type="sine",vol=.04){
+    try{
+      if(!window.AudioContext && !window.webkitAudioContext) return;
+      if(!beep.ctx) beep.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const ac=beep.ctx;if(ac.state==="suspended") ac.resume();
+      const osc=ac.createOscillator(), gain=ac.createGain();
+      osc.type=type;osc.frequency.value=freq;gain.gain.value=vol;
+      gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);
+      osc.connect(gain).connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);
+    }catch(e){}
+  }
+
+  function toast(msg,kind="good"){
+    const el=$("toast");el.textContent=msg;
+    el.style.color=kind==="good"?"#bbf7d0":kind==="bad"?"#fecaca":"#fef08a";
+    el.classList.add("show");state.toastUntil=performance.now()+820;
+  }
+
+  function addParticles(x,y,kind="good",amount=24){
+    const color=kind==="good"?"#86efac":kind==="bad"?"#fb7185":"#67e8f9";
+    for(let i=0;i<amount;i++){
+      const a=Math.random()*Math.PI*2,sp=Math.random()*5.8+1.2;
+      state.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:34+Math.random()*24,color,r:2+Math.random()*3});
+    }
+  }
+  function addRing(x,y,color="#facc15"){state.rings.push({x,y,r:10,life:32,color});}
+
+  function correctHit(enemy){
+    const elapsed=(performance.now()-state.startRoundTime)/1000;
+    const set=modeSettings();
+    const timeBonus=Math.max(0,Math.round(60-elapsed*7));
+    state.combo++;state.bestCombo=Math.max(state.bestCombo,state.combo);
+    const comboBonus=Math.min(180,state.combo*18);
+    const gain=Math.round((100+comboBonus+timeBonus)*set.scoreMult);
+    state.score+=gain;state.correctCount++;
+    reduceWeak(state.target.en);
+    toast(`正解 +${gain}`,"good");addParticles(enemy.x,enemy.y,"good",34);addRing(enemy.x,enemy.y,"#86efac");
+    beep(780,.07,"triangle",.055);setTimeout(()=>beep(1040,.08,"triangle",.04),70);
+    state.index++;updateHUD();
+    setTimeout(()=>{if(state.running&&!state.paused)nextRound();},540);
+  }
+
+  function wrongHit(enemy){
+    state.combo=0;state.shield--;state.score=Math.max(0,state.score-25);
+    state.wrongMap[state.target.en]=state.target;increaseWeak(state.target.en);
+    enemy.wrongFlash=18;if(state.difficulty==="beginner") state.showHint=true;
+    state.shake=10;toast(`おしい！ ${state.target.en} をさがそう`,"bad");
+    addParticles(enemy.x,enemy.y,"bad",20);addRing(enemy.x,enemy.y,"#fb7185");beep(190,.11,"sawtooth",.035);
+    if(state.shield<=0){
+      state.shield=state.difficulty==="hard"?1:3;
+      if(state.difficulty==="beginner"){state.showHint=true;toast("ヒントあり","hint");slowCorrectEnemy();}
+      else toast("つづけよう","hint");
+    }
+    updateHUD();saveProgress();
+  }
+
+  function increaseWeak(en){state.progress.weak[en]=(state.progress.weak[en]||0)+1;saveProgress();}
+  function reduceWeak(en){if(state.progress.weak[en]) state.progress.weak[en]=Math.max(0,state.progress.weak[en]-0.35);saveProgress();}
+  function slowCorrectEnemy(){state.enemies.forEach(e=>{if(e.word.en===state.target.en){e.vx*=.45;e.vy*=.45;}});}
+
+  function finishGame(){
+    state.running=false;
+    const wrongs=Object.values(state.wrongMap);
+    state.lastReviewWords=wrongs;
+    const accuracy=Math.round((state.correctCount/Math.max(1,state.questions.length))*100);
+    const clear=state.correctCount>=state.questions.length-wrongs.length;
+    const coinsEarned=Math.max(1,Math.floor(state.score/350))+(wrongs.length===0?3:0)+(state.difficulty==="hard"?2:0);
+    state.progress.coins=(state.progress.coins||0)+coinsEarned;
+    state.progress.totalPlays=(state.progress.totalPlays||0)+1;
+    state.progress.best[state.difficulty]=Math.max(state.progress.best[state.difficulty]||0,state.score);
+    if(state.correctCount>=Math.min(10,state.questions.length) || state.score>=1000){state.progress.unlockedBonus=true;state.bonusUnlocked=true;}
+    saveProgress();
+
+    $("finalScore").textContent=state.score;
+    let rank="よくできました";
+    if(state.score>=2700) rank="すばらしい";
+    else if(state.score>=2000) rank="よく見ています";
+    else if(state.score>=1200) rank="いい感じ";
+    $("rankTitle").textContent=rank;
+    $("resultMessage").innerHTML=`レベル: <b>${labelDifficulty()}</b>　できた: <b>${state.correctCount}/${state.questions.length}</b>　正答: <b>${accuracy}%</b>　つづけて正解: <b>${state.bestCombo}</b>　コイン: <b>${coinsEarned}</b><br>絵を見ながら、意味と英語をつなげました。`;
+    $("growthLog").innerHTML=`・絵を見て英語を選べました<br>・まちがえたことばは、あとでまた出ます<br>・あせらず、もう一度練習できます`;
+    renderReviewGrid(wrongs.length?wrongs:shuffle(state.questions).slice(0,Math.min(4,state.questions.length)));
+    $("reviewBtn").style.display=wrongs.length>=3?"":"none";
+    $("bonusBanner").classList.toggle("hidden",!state.progress.unlockedBonus);
+    showScreen("resultScreen");
+    updateHUD();
+  }
+
+  function labelDifficulty(){return state.difficulty==="beginner"?"かんたん":state.difficulty==="normal"?"ふつう":"チャレンジ";}
+  function renderReviewGrid(list){
+    $("reviewGrid").innerHTML="";
+    list.forEach(w=>{
+      const div=document.createElement("div");div.className="wordPill";
+      div.innerHTML=`<span>${escapeHtml(w.ja)}</span><span>${escapeHtml(w.en)}</span>`;
+      $("reviewGrid").appendChild(div);
+    });
+  }
+
+  function startBonusGame(){
+    state.mode="bonus";state.running=true;state.paused=false;
+    state.score=0;state.combo=0;state.bestCombo=0;state.shield=3;state.bullets=[];state.particles=[];state.rings=[];
+    state.bonusTimeLeft=30;state.bonusLastTime=performance.now();state.player.x=state.W/2;
+    showScreen(null);nextBonusRound();updateHUD();
+  }
+
+  function nextBonusRound(){
+    state.bonusTarget=shuffle(state.words)[0];
+    const related=relatedChoicesFor(state.bonusTarget,4);
+    const choices=shuffle([state.bonusTarget,...shuffle(related.filter(w=>w.en!==state.bonusTarget.en)).slice(0,3)]);
+    const top=Math.max(150,state.H*.28), bottom=Math.max(top+110,state.H*.64);
+    state.enemies=choices.map(w=>{
+      const wordW=Math.min(210,Math.max(90,w.ja.length*24+58));
+      return {word:w,x:50+Math.random()*Math.max(80,state.W-100),y:top+Math.random()*Math.max(70,bottom-top),w:wordW,h:48,
+        vx:(Math.random()<.5?-1:1)*(1.0+Math.random()*1.1),vy:(Math.random()<.5?-1:1)*(.38+Math.random()*.45),rot:0,spin:0,pulse:0,hit:false,wrongFlash:0,type:"ja"};
+    });
+  }
+
+  function bonusCorrect(enemy){
+    state.combo++;state.bestCombo=Math.max(state.bestCombo,state.combo);
+    const gain=120+state.combo*25;state.score+=gain;reduceWeak(enemy.word.en);
+    toast(`ボーナス +${gain}`,"good");addParticles(enemy.x,enemy.y,"good",34);addRing(enemy.x,enemy.y,"#facc15");
+    beep(900,.06,"triangle",.055);nextBonusRound();updateHUD();
+  }
+
+  function bonusWrong(enemy){
+    state.combo=0;state.score=Math.max(0,state.score-35);increaseWeak(state.bonusTarget.en);
+    enemy.wrongFlash=18;state.shake=9;toast("ちがいます","bad");addParticles(enemy.x,enemy.y,"bad",18);beep(170,.08,"sawtooth",.035);updateHUD();
+  }
+
+  function finishBonus(){
+    state.running=false;
+    const coinsEarned=Math.max(1,Math.floor(state.score/450));
+    state.progress.coins=(state.progress.coins||0)+coinsEarned;
+    state.progress.best.bonus=Math.max(state.progress.best.bonus||0,state.score);
+    saveProgress();
+    $("finalScore").textContent=state.score;
+    $("rankTitle").textContent="ボーナス終了";
+    $("resultMessage").innerHTML=`ボーナスが終わりました。つづけて正解: <b>${state.bestCombo}</b>　コイン: <b>${coinsEarned}</b><br>絵と英語を見て、日本語を選びました。`;
+    $("growthLog").innerHTML=`・英語から日本語を選べました<br>・絵とことばをつなげました`;
+    renderReviewGrid(shuffle(state.words).slice(0,4));
+    $("reviewBtn").style.display="none";
+    $("bonusBanner").classList.add("hidden");
+    showScreen("resultScreen");
+    updateHUD();
+  }
+
+  function update(){
+    if(!state.running||state.paused) return;
+    const now=performance.now();
+    if(state.mode==="bonus"){
+      const dt=(now-state.bonusLastTime)/1000;state.bonusLastTime=now;state.bonusTimeLeft-=dt;
+      if(state.bonusTimeLeft<=0){finishBonus();return;}
+    } else {
+      if(now-state.startRoundTime>modeSettings().hintDelay && state.difficulty==="beginner"){state.showHint=true;updateHUD();}
+    }
+
+    let dir=0;
+    if(state.keys["ArrowLeft"]||state.keys["a"]||state.keys["A"]) dir-=1;
+    if(state.keys["ArrowRight"]||state.keys["d"]||state.keys["D"]) dir+=1;
+    dir+=state.touchDir;
+    if(dir) state.player.x += Math.max(-1,Math.min(1,dir))*state.player.speed;
+    state.player.x=Math.max(32,Math.min(state.W-32,state.player.x));
+
+    state.stars.forEach(s=>{s.y+=s.s;s.tw+=.02;if(s.y>state.H){s.y=0;s.x=Math.random()*state.W;}});
+    state.enemies.forEach(e=>{
+      if(e.hit) return;
+      const speedScale=(state.mode==="main" && state.difficulty==="beginner" && state.showHint && e.word.en!==state.target.en)?.55:1;
+      e.x+=e.vx*speedScale;e.y+=e.vy*speedScale;e.rot+=e.spin;e.pulse+=.045;if(e.wrongFlash>0)e.wrongFlash--;
+      const top=Math.max(140,state.H*.24),bottom=Math.max(top+80,state.H*.69);
+      if(e.x<e.w/2+8||e.x>state.W-e.w/2-8)e.vx*=-1;
+      if(e.y<top||e.y>bottom)e.vy*=-1;
+    });
+    state.bullets.forEach(b=>{b.y+=b.vy;b.life--;});
+    state.bullets=state.bullets.filter(b=>b.y>-20&&b.life>0);
+    state.particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.05;p.life--;});
+    state.particles=state.particles.filter(p=>p.life>0);
+    state.rings.forEach(r=>{r.r+=4.2;r.life--;});
+    state.rings=state.rings.filter(r=>r.life>0);
+
+    for(const b of state.bullets){
+      for(const e of state.enemies){
+        if(e.hit) continue;
+        if(circleRect(b.x,b.y,b.r,{x:e.x,y:e.y,w:e.w,h:e.h})){
+          e.hit=true;b.life=0;
+          if(state.mode==="bonus"){
+            e.word.en===state.bonusTarget.en ? bonusCorrect(e) : bonusWrong(e);
+          } else {
+            e.word.en===state.target.en ? correctHit(e) : wrongHit(e);
+          }
+          return;
+        }
+      }
+    }
+    if(state.toastUntil&&now>state.toastUntil){$("toast").classList.remove("show");state.toastUntil=0;}
+    if(state.shake>0)state.shake*=.85;
+    updateHUD();
+  }
+
+  function circleRect(cx,cy,r,rect){
+    const nx=Math.max(rect.x-rect.w/2,Math.min(cx,rect.x+rect.w/2));
+    const ny=Math.max(rect.y-rect.h/2,Math.min(cy,rect.y+rect.h/2));
+    const dx=cx-nx,dy=cy-ny;return dx*dx+dy*dy<=r*r;
+  }
+
+  function draw(){
+    const shakeX=state.shake?(Math.random()-.5)*state.shake:0, shakeY=state.shake?(Math.random()-.5)*state.shake:0;
+    ctx.clearRect(0,0,state.W,state.H);
+    ctx.save();ctx.translate(shakeX,shakeY);
+    drawBackground();
+    if(state.running){drawPlayer();drawBullets();drawEnemies();drawParticles();drawRings();}
+    else {ctx.save();ctx.globalAlpha=.25;ctx.translate(state.W*.5,state.H*.72);drawShip(0,0,1.2);ctx.restore();}
+    ctx.restore();
+    requestAnimationFrame(loop);
+  }
+
+  function drawBackground(){
+    const word = state.mode==="bonus" ? state.bonusTarget : state.target;
+    const theme = THEMES[(word&&word.theme)||"friend"] || THEMES.friend;
+    const time = performance.now()*.001;
+    const g=ctx.createLinearGradient(0,0,state.W,state.H);
+    g.addColorStop(0,theme.bg1);g.addColorStop(1,theme.bg2);
+    ctx.fillStyle=g;ctx.fillRect(0,0,state.W,state.H);
+
+    drawAtmosphere(theme,time);
+
+    for(const s of state.stars){ctx.globalAlpha=.34+Math.sin(s.tw)*.14;ctx.fillStyle="#ffffff";ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+
+    if(word){
+      drawMemoryScene(theme,time);
+    }
+
+    ctx.save();ctx.globalAlpha=.16;ctx.strokeStyle=theme.accent;ctx.lineWidth=1;
+    const horizon=state.H*.72;
+    for(let i=0;i<12;i++){const y=horizon+i*i*3.2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(state.W,y);ctx.stroke();}
+    for(let i=-8;i<=8;i++){ctx.beginPath();ctx.moveTo(state.W/2,horizon);ctx.lineTo(state.W/2+i*state.W/7,state.H);ctx.stroke();}
+    ctx.restore();
+  }
+
+  function drawAtmosphere(theme,time){
+    ctx.save();
+    ctx.globalCompositeOperation="screen";
+    for(let i=0;i<4;i++){
+      const x=state.W*((i+1)/5)+Math.sin(time*.22+i*1.7)*state.W*.06;
+      const beam=ctx.createLinearGradient(x-state.W*.22,0,x+state.W*.18,state.H);
+      beam.addColorStop(0,"rgba(255,255,255,0)");
+      beam.addColorStop(.52,hexToRgba(i%2?theme.accent2:theme.accent,.10));
+      beam.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.fillStyle=beam;
+      ctx.beginPath();
+      ctx.moveTo(x-state.W*.16,0);ctx.lineTo(x+state.W*.08,0);ctx.lineTo(x+state.W*.28,state.H);ctx.lineTo(x-state.W*.32,state.H);
+      ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMemoryScene(theme,time){
+    const size=Math.min(state.W,state.H)*.66;
+    const scale=Math.max(.62,Math.min(1.18,size/520));
+    const cx=state.W*.5;
+    const cy=state.H*.50+Math.sin(time*.8)*3;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.scale(scale,scale);
+    drawSceneStage(theme);
+    if(theme.scene==="spouse") drawSpouseScene(theme);
+    else if(theme.scene==="uncleAunt") drawUncleAuntScene(theme);
+    else if(theme.scene==="siblings") drawSiblingsScene(theme);
+    else if(theme.scene==="niece") drawNieceScene(theme);
+    else if(theme.scene==="daughter") drawDaughterScene(theme);
+    else if(theme.scene==="mother") drawMotherScene(theme);
+    else if(theme.scene==="grandson") drawGrandsonScene(theme);
+    else if(theme.scene==="grandparent") drawGrandparentScene(theme);
+    else if(theme.scene==="cousin") drawCousinScene(theme);
+    else drawFriendScene(theme);
+    ctx.restore();
+  }
+
+  function drawSceneStage(theme){
+    ctx.save();
+    ctx.globalAlpha=.34;
+    const floor=ctx.createRadialGradient(0,120,20,0,120,270);
+    floor.addColorStop(0,hexToRgba(theme.accent,.40));
+    floor.addColorStop(.68,hexToRgba(theme.accent2,.12));
+    floor.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=floor;ctx.beginPath();ctx.ellipse(0,118,286,64,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=.16;ctx.strokeStyle="#fff";ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(-230,-20);ctx.lineTo(0,-150);ctx.lineTo(230,-20);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-178,-22);ctx.lineTo(-178,110);ctx.lineTo(178,110);ctx.lineTo(178,-22);ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSpouseScene(theme){
+    drawLinkedRings(-78,-142,theme.accent2);
+    drawScenePerson(-70,18,92,{shirt:theme.focus==="wife"?"#fb7185":"#38bdf8",pants:"#1e293b",hair:theme.focus==="wife"?"#3b102f":"#172554",longHair:theme.focus==="wife",dress:theme.focus==="wife",focus:theme.focus==="wife",tag:theme.focus==="wife"?"SPOUSE":"PARTNER"});
+    drawScenePerson(76,18,92,{shirt:theme.focus==="husband"?"#60a5fa":"#f472b6",pants:"#0f172a",hair:theme.focus==="husband"?"#172554":"#3b102f",longHair:theme.focus!=="husband",dress:theme.focus!=="husband",focus:theme.focus==="husband",tag:theme.focus==="husband"?"SPOUSE":"PARTNER"});
+    drawHoldHands(-32,44,34,44,theme.accent2);
+    drawHeart(0,-102,31,theme.accent);
+    drawFlower(134,34,theme.accent2,theme.accent);
+    drawMiniLabel(0,142,"married partners",theme.accent);
+  }
+
+  function drawUncleAuntScene(theme){
+    drawRelationLine([[-118,-82],[-20,-82],[76,-82]],theme.accent2);
+    drawRelationLine([[-118,-82],[-118,34]],theme.accent2);
+    drawRelationLine([[76,-82],[76,32]],theme.accent2);
+    drawScenePerson(-118,16,80,{shirt:"#60a5fa",pants:"#0f172a",hair:"#172554",tag:"PARENT"});
+    drawScenePerson(76,14,84,{shirt:theme.focus==="aunt"?"#f0abfc":"#fdba74",pants:"#1e293b",hair:theme.focus==="aunt"?"#581c87":"#422006",longHair:theme.focus==="aunt",dress:theme.focus==="aunt",focus:true,elder:false,tag:"PARENT'S SIBLING"});
+    drawScenePerson(-168,86,54,{shirt:"#86efac",pants:"#1e293b",hair:"#422006",child:true,tag:"YOU"});
+    drawMiniLabel(8,142,theme.focus==="aunt"?"your parent's sister":"your parent's brother",theme.accent);
+  }
+
+  function drawSiblingsScene(theme){
+    drawRelationLine([[-82,-84],[0,-120],[82,-84]],theme.accent2);
+    drawScenePerson(-82,28,76,{shirt:theme.focus==="sister"?"#f9a8d4":"#38bdf8",pants:"#1e293b",hair:theme.focus==="sister"?"#581c87":"#172554",longHair:theme.focus==="sister",dress:theme.focus==="sister",focus:theme.focus==="sister",child:true,tag:theme.focus==="sister"?"SIBLING":"BRO/SIS"});
+    drawScenePerson(82,28,76,{shirt:theme.focus==="brother"?"#67e8f9":"#c4b5fd",pants:"#0f172a",hair:"#172554",cap:theme.focus==="brother",focus:theme.focus==="brother",child:true,tag:theme.focus==="brother"?"SIBLING":"BRO/SIS"});
+    drawToyBlocks(0,96,theme.accent,theme.accent2);
+    drawMiniLabel(0,142,"same parents",theme.accent);
+  }
+
+  function drawNieceScene(theme){
+    drawRelationLine([[-128,-44],[-28,-44],[-28,42],[102,42]],theme.accent2);
+    drawScenePerson(-128,32,66,{shirt:"#67e8f9",pants:"#0f172a",hair:"#172554",tag:"YOU"});
+    drawScenePerson(-28,28,74,{shirt:"#c4b5fd",pants:"#1e293b",hair:"#422006",tag:"SIBLING"});
+    drawScenePerson(104,72,58,{shirt:"#f9a8d4",pants:"#7c2d12",hair:"#581c87",longHair:true,dress:true,child:true,focus:true,tag:"THEIR CHILD"});
+    drawStar(142,-44,24,theme.accent2);
+    drawMiniLabel(0,142,"sibling's daughter",theme.accent);
+  }
+
+  function drawDaughterScene(theme){
+    drawRelationLine([[-72,8],[44,56]],theme.accent2);
+    drawScenePerson(-76,24,86,{shirt:"#86efac",pants:"#0f172a",hair:"#172554",tag:"PARENT"});
+    drawScenePerson(56,74,58,{shirt:"#f9a8d4",pants:"#7c2d12",hair:"#581c87",longHair:true,dress:true,child:true,focus:true,tag:"MY CHILD"});
+    drawSmallHouse(116,-48,theme.accent2);
+    drawMiniLabel(0,142,"my girl child",theme.accent);
+  }
+
+  function drawMotherScene(theme){
+    drawScenePerson(-52,22,94,{shirt:"#86efac",pants:"#064e3b",hair:"#422006",longHair:true,focus:true,tag:"PARENT"});
+    drawScenePerson(78,76,56,{shirt:"#fef08a",pants:"#1e293b",hair:"#172554",child:true,tag:"CHILD"});
+    drawHoldHands(-10,42,48,62,theme.accent2);
+    drawHeart(74,-74,26,theme.accent);
+    drawMiniLabel(0,142,"parent who cares for child",theme.accent);
+  }
+
+  function drawGrandsonScene(theme){
+    drawScenePerson(-78,20,92,{shirt:"#fdba74",pants:"#422006",hair:"#e5e7eb",elder:true,tag:"GRANDPARENT"});
+    drawScenePerson(78,76,58,{shirt:"#93c5fd",pants:"#1e3a8a",hair:"#172554",child:true,focus:true,cap:true,tag:"GRANDCHILD"});
+    drawRelationLine([[-26,22],[38,64]],theme.accent2);
+    drawToyRocket(142,58,theme.accent,theme.accent2);
+    drawMiniLabel(0,142,"grandparent's boy",theme.accent);
+  }
+
+  function drawGrandparentScene(theme){
+    const female=theme.focus==="grandmother";
+    drawScenePerson(-18,20,104,{shirt:female?"#f0abfc":"#fdba74",pants:"#422006",hair:"#e5e7eb",longHair:female,dress:female,elder:true,focus:true,tag:"GRANDPARENT"});
+    drawScenePerson(120,82,54,{shirt:"#93c5fd",pants:"#1e293b",hair:"#172554",child:true,tag:"GRANDCHILD"});
+    drawRelationLine([[36,22],[88,70]],theme.accent2);
+    if(female) drawFlower(-128,-30,theme.accent2,theme.accent);
+    else drawBook(-136,-12,theme.accent2,theme.accent);
+    drawMiniLabel(0,142,female?"parent's mother":"parent's father",theme.accent);
+  }
+
+  function drawFriendScene(theme){
+    drawScenePerson(-76,34,78,{shirt:"#67e8f9",pants:"#0f172a",hair:"#172554",child:true,focus:true,tag:"ME"});
+    drawScenePerson(76,34,78,{shirt:"#facc15",pants:"#1e293b",hair:"#422006",child:true,focus:true,tag:"FRIEND"});
+    drawHighFive(-28,-4,28,-4,theme.accent2);
+    drawHeart(0,-86,28,theme.accent);
+    drawMiniLabel(0,142,"chosen companion",theme.accent);
+  }
+
+  function drawCousinScene(theme){
+    drawRelationLine([[0,-132],[0,-92],[-112,-92],[-112,-48]],theme.accent2);
+    drawRelationLine([[0,-92],[112,-92],[112,-48]],theme.accent2);
+    drawRelationLine([[-112,18],[-112,58],[-58,58]],theme.accent2);
+    drawRelationLine([[112,18],[112,58],[58,58]],theme.accent2);
+    drawScenePerson(0,-126,58,{shirt:"#fdba74",pants:"#422006",hair:"#e5e7eb",elder:true,tag:"GRANDPARENT"});
+    drawScenePerson(-112,-26,64,{shirt:"#60a5fa",pants:"#0f172a",hair:"#172554",tag:"PARENT"});
+    drawScenePerson(112,-26,64,{shirt:"#c4b5fd",pants:"#1e293b",hair:"#422006",tag:"AUNT/UNCLE"});
+    drawScenePerson(-58,82,52,{shirt:"#86efac",pants:"#0f172a",hair:"#172554",child:true,tag:"YOU"});
+    drawScenePerson(58,82,52,{shirt:"#bef264",pants:"#14532d",hair:"#422006",child:true,focus:true,tag:"SAME LEVEL"});
+    drawMiniLabel(0,142,"same generation in family",theme.accent);
+  }
+
+  function drawSceneCaption(theme){
+    ctx.save();
+    const text=theme.note.toUpperCase();
+    const y=state.H*.82;
+    ctx.globalAlpha=.22;ctx.fillStyle="#fff";
+    ctx.font=`1000 ${Math.min(60,Math.max(27,state.W/14))}px system-ui,-apple-system,sans-serif`;
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(text,state.W*.5,y);
+    ctx.restore();
+  }
+
+  function drawScenePerson(x,y,s,o){
+    o=o||{};
+    ctx.save();ctx.translate(x,y);
+    if(o.focus){
+      ctx.save();ctx.globalAlpha=.42;ctx.strokeStyle=o.shirt||"#fff";ctx.lineWidth=7;
+      ctx.beginPath();ctx.ellipse(0,4,s*.68,s*.93,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+    }
+    ctx.fillStyle="rgba(0,0,0,.26)";ctx.beginPath();ctx.ellipse(0,s*.74,s*.46,s*.14,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=o.pants||"#1e293b";
+    roundRect(-s*.24,s*.22,s*.18,s*.52,s*.07);ctx.fill();
+    roundRect(s*.06,s*.22,s*.18,s*.52,s*.07);ctx.fill();
+    ctx.fillStyle=o.shirt||"#67e8f9";
+    if(o.dress){
+      ctx.beginPath();ctx.moveTo(0,-s*.18);ctx.lineTo(-s*.46,s*.46);ctx.lineTo(s*.46,s*.46);ctx.closePath();ctx.fill();
+    }else{
+      roundRect(-s*.35,-s*.24,s*.70,s*.58,s*.16);ctx.fill();
+    }
+    ctx.strokeStyle=o.shirt||"#67e8f9";ctx.lineWidth=s*.12;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-s*.32,-s*.07);ctx.lineTo(-s*.54,s*.15);ctx.moveTo(s*.32,-s*.07);ctx.lineTo(s*.54,s*.15);ctx.stroke();
+    const skin=o.elder?"#f5d0a9":"#fed7aa";
+    ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,-s*.54,s*.24,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=o.hair||"#422006";
+    ctx.beginPath();ctx.arc(0,-s*.62,s*.26,Math.PI,Math.PI*2);ctx.fill();
+    if(o.longHair){roundRect(-s*.28,-s*.58,s*.18,s*.46,s*.09);ctx.fill();roundRect(s*.10,-s*.58,s*.18,s*.46,s*.09);ctx.fill();}
+    if(o.elder){
+      ctx.strokeStyle="#f8fafc";ctx.lineWidth=s*.04;ctx.beginPath();ctx.arc(-s*.09,-s*.55,s*.07,0,Math.PI*2);ctx.arc(s*.09,-s*.55,s*.07,0,Math.PI*2);ctx.moveTo(-s*.02,-s*.55);ctx.lineTo(s*.02,-s*.55);ctx.stroke();
+      ctx.strokeStyle="#e5e7eb";ctx.lineWidth=s*.06;ctx.beginPath();ctx.moveTo(s*.48,s*.12);ctx.lineTo(s*.62,s*.72);ctx.stroke();
+    }
+    if(o.cap){ctx.fillStyle="#facc15";ctx.beginPath();ctx.arc(0,-s*.72,s*.24,Math.PI,Math.PI*2);ctx.fill();ctx.fillRect(s*.04,-s*.72,s*.27,s*.08);}
+    ctx.fillStyle="#0f172a";ctx.beginPath();ctx.arc(-s*.08,-s*.54,s*.018,0,Math.PI*2);ctx.arc(s*.08,-s*.54,s*.018,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#7f1d1d";ctx.lineWidth=s*.025;ctx.beginPath();ctx.arc(0,-s*.48,s*.08,0,Math.PI);ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMiniLabel(x,y,text,color,alpha){
+    // Intentionally blank: background scenes stay visual-only so no extra study words appear.
+  }
+
+  function drawRelationLine(points,color){
+    ctx.save();ctx.strokeStyle=hexToRgba(color,.72);ctx.lineWidth=5;ctx.lineCap="round";ctx.lineJoin="round";
+    ctx.beginPath();points.forEach((p,i)=>{if(i)ctx.lineTo(p[0],p[1]);else ctx.moveTo(p[0],p[1]);});ctx.stroke();ctx.restore();
+  }
+
+  function drawLinkedRings(x,y,color){
+    ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=9;ctx.globalAlpha=.8;
+    ctx.beginPath();ctx.arc(0,0,38,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(60,0,38,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
+
+  function drawHoldHands(x1,y1,x2,y2,color){drawRelationLine([[x1,y1],[x2,y2]],color);}
+  function drawHighFive(x1,y1,x2,y2,color){drawRelationLine([[x1,y1],[0,-22],[x2,y2]],color);}
+
+  function drawFlower(x,y,color1,color2){
+    ctx.save();ctx.translate(x,y);ctx.strokeStyle=color1;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,52);ctx.lineTo(0,0);ctx.stroke();
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.fillStyle=i%2?color1:color2;ctx.beginPath();ctx.ellipse(Math.cos(a)*20,Math.sin(a)*20,18,9,a,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle="#fef3c7";ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+
+  function drawToyBlocks(x,y,c1,c2){
+    ctx.save();ctx.translate(x,y);ctx.globalAlpha=.85;
+    [[-42,0,c1],[0,-14,c2],[42,0,"#facc15"]].forEach(b=>{roundRect(b[0]-18,b[1]-18,36,36,7);ctx.fillStyle=b[2];ctx.fill();ctx.strokeStyle="rgba(255,255,255,.35)";ctx.lineWidth=2;ctx.stroke();});
+    ctx.restore();
+  }
+
+  function drawSmallHouse(x,y,color){
+    ctx.save();ctx.translate(x,y);ctx.globalAlpha=.72;ctx.strokeStyle=color;ctx.fillStyle=hexToRgba(color,.18);ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(-42,-6);ctx.lineTo(0,-44);ctx.lineTo(42,-6);ctx.closePath();ctx.fill();ctx.stroke();
+    roundRect(-32,-6,64,62,8);ctx.fill();ctx.stroke();ctx.restore();
+  }
+
+  function drawToyRocket(x,y,c1,c2){
+    ctx.save();ctx.translate(x,y);ctx.rotate(.35);ctx.fillStyle=c1;ctx.beginPath();ctx.moveTo(0,-36);ctx.lineTo(20,10);ctx.lineTo(0,28);ctx.lineTo(-20,10);ctx.closePath();ctx.fill();
+    ctx.fillStyle=c2;ctx.beginPath();ctx.arc(0,-4,8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#f97316";ctx.beginPath();ctx.moveTo(-10,24);ctx.lineTo(0,48);ctx.lineTo(10,24);ctx.closePath();ctx.fill();ctx.restore();
+  }
+
+  function drawBook(x,y,c1,c2){
+    ctx.save();ctx.translate(x,y);ctx.globalAlpha=.8;ctx.fillStyle=c1;roundRect(-44,-24,40,64,8);ctx.fill();ctx.fillStyle=c2;roundRect(4,-24,40,64,8);ctx.fill();
+    ctx.strokeStyle="#f8fafc";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,38);ctx.stroke();ctx.restore();
+  }
+
+  function hexToRgba(hex,alpha){
+    const clean=String(hex||"#ffffff").replace("#","");
+    const full=clean.length===3?clean.split("").map(c=>c+c).join(""):clean;
+    const n=parseInt(full,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+  }
+
+  function drawThemeIcon(icon, accent, size){
+    ctx.save();
+    ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=Math.max(3,size*.018);ctx.lineCap="round";ctx.lineJoin="round";
+    if(icon==="ring"){
+      ctx.beginPath();ctx.arc(-size*.12,0,size*.16,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(size*.12,0,size*.16,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,-size*.12);ctx.lineTo(0,-size*.34);ctx.lineTo(size*.08,-size*.43);ctx.lineTo(size*.16,-size*.34);ctx.lineTo(size*.08,-size*.25);ctx.closePath();ctx.stroke();
+      drawHeart(0,size*.23,size*.18,accent);
+    } else if(icon==="twoKids"){
+      drawPerson(-size*.16,0,size*.22,accent,false);drawPerson(size*.16,0,size*.22,accent,false);
+      ctx.beginPath();ctx.moveTo(-size*.03,size*.12);ctx.lineTo(size*.03,size*.12);ctx.stroke();
+    } else if(icon==="littleGirl"){
+      drawPerson(0,0,size*.25,accent,false);drawStar(size*.2,-size*.25,size*.06,accent);
+    } else if(icon==="parentKid"){
+      drawPerson(-size*.13,-size*.02,size*.28,accent,true);drawPerson(size*.18,size*.07,size*.18,accent,false);
+      ctx.beginPath();ctx.moveTo(-size*.02,size*.1);ctx.lineTo(size*.06,size*.13);ctx.stroke();
+    } else if(icon==="adultChild"){
+      drawPerson(-size*.14,-size*.02,size*.28,accent,true);drawPerson(size*.17,size*.07,size*.18,accent,false);
+      ctx.beginPath();ctx.arc(size*.02,-size*.2,size*.045,0,Math.PI*2);ctx.stroke();
+    } else if(icon==="elderKid"){
+      drawPerson(-size*.14,-size*.02,size*.30,accent,true);drawPerson(size*.18,size*.08,size*.18,accent,false);
+      ctx.beginPath();ctx.moveTo(-size*.25,size*.08);ctx.lineTo(-size*.31,size*.26);ctx.stroke();
+    } else if(icon==="elder"){
+      drawPerson(0,0,size*.32,accent,true);
+      ctx.beginPath();ctx.moveTo(size*.18,size*.05);ctx.lineTo(size*.28,size*.27);ctx.stroke();
+      ctx.beginPath();ctx.arc(-size*.11,-size*.17,size*.025,0,Math.PI*2);ctx.arc(size*.11,-size*.17,size*.025,0,Math.PI*2);ctx.stroke();
+    } else if(icon==="friends"){
+      drawPerson(-size*.16,0,size*.24,accent,false);drawPerson(size*.16,0,size*.24,accent,false);
+      drawHeart(0,-size*.25,size*.09,accent);
+    } else if(icon==="tree"){
+      ctx.beginPath();ctx.moveTo(0,-size*.28);ctx.lineTo(0,size*.22);ctx.moveTo(0,-size*.07);ctx.lineTo(-size*.24,size*.08);ctx.moveTo(0,-size*.07);ctx.lineTo(size*.24,size*.08);ctx.stroke();
+      drawPerson(0,-size*.38,size*.12,accent,false);drawPerson(-size*.28,size*.1,size*.12,accent,false);drawPerson(size*.28,size*.1,size*.12,accent,false);
+    }
+    ctx.restore();
+  }
+
+  function drawPerson(x,y,s,accent,adult){
+    ctx.save();ctx.translate(x,y);ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=Math.max(2,s*.12);ctx.lineCap="round";
+    ctx.beginPath();ctx.arc(0,-s*.75,s*.23,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,-s*.5);ctx.lineTo(0,s*.18);ctx.moveTo(-s*.35,-s*.18);ctx.lineTo(s*.35,-s*.18);ctx.moveTo(0,s*.18);ctx.lineTo(-s*.28,s*.62);ctx.moveTo(0,s*.18);ctx.lineTo(s*.28,s*.62);ctx.stroke();
+    if(adult){ctx.beginPath();ctx.arc(0,-s*.75,s*.31,Math.PI*.05,Math.PI*.95);ctx.stroke();}
+    ctx.restore();
+  }
+
+  function drawHeart(x,y,s,color){
+    ctx.save();ctx.translate(x,y);ctx.fillStyle=color;ctx.beginPath();
+    ctx.moveTo(0,s*.35);ctx.bezierCurveTo(-s*.75,-s*.15,-s*.45,-s*.75,0,-s*.35);ctx.bezierCurveTo(s*.45,-s*.75,s*.75,-s*.15,0,s*.35);ctx.fill();ctx.restore();
+  }
+  function drawStar(x,y,s,color){
+    ctx.save();ctx.translate(x,y);ctx.fillStyle=color;ctx.beginPath();
+    for(let i=0;i<10;i++){const r=i%2?s*.45:s;const a=-Math.PI/2+i*Math.PI/5;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}
+    ctx.closePath();ctx.fill();ctx.restore();
+  }
+
+  function drawPlayer(){ctx.save();ctx.translate(state.player.x,state.player.y);drawShip(0,0,1);const flame=16+Math.random()*9;const g=ctx.createLinearGradient(0,12,0,12+flame);g.addColorStop(0,"#fef3c7");g.addColorStop(.5,"#fb923c");g.addColorStop(1,"rgba(239,68,68,0)");ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(-8,16);ctx.lineTo(0,18+flame);ctx.lineTo(8,16);ctx.closePath();ctx.fill();ctx.restore();}
+  function drawShip(x,y,scale=1){
+    ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+    const grad=ctx.createLinearGradient(0,-30,0,28);grad.addColorStop(0,"#e0f2fe");grad.addColorStop(.55,"#38bdf8");grad.addColorStop(1,"#1d4ed8");
+    ctx.shadowColor="#67e8f9";ctx.shadowBlur=16;ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(30,20);ctx.lineTo(8,12);ctx.lineTo(0,30);ctx.lineTo(-8,12);ctx.lineTo(-30,20);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle="rgba(255,255,255,.76)";ctx.beginPath();ctx.ellipse(0,-9,9,12,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.55)";ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  }
+  function drawBullets(){for(const b of state.bullets){const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,14);g.addColorStop(0,"#fff7ad");g.addColorStop(.45,"#facc15");g.addColorStop(1,"rgba(250,204,21,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,14,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff7ad";ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();}}
+
+  function drawEnemies(){
+    const set=modeSettings();
+    for(const e of state.enemies){
+      if(e.hit) continue;
+      ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(e.rot)*.04);
+      const targetWord = state.mode==="bonus" ? state.bonusTarget : state.target;
+      const isTarget=targetWord && e.word.en===targetWord.en;
+      const beginnerColor=state.mode==="main" && set.showCorrectColor;
+      const hinted=beginnerColor&&state.showHint&&isTarget;
+      const flash=e.wrongFlash>0;
+      let fill=(beginnerColor&&isTarget)?"#bae6fd":"#f8fafc";
+      if(flash)fill="#fecaca";
+      if(hinted){ctx.shadowColor="#facc15";ctx.shadowBlur=24;}else{ctx.shadowColor="rgba(0,0,0,.48)";ctx.shadowBlur=14;}
+      roundRect(-e.w/2,-e.h/2,e.w,e.h,18);const grad=ctx.createLinearGradient(0,-e.h/2,0,e.h/2);
+      grad.addColorStop(0,fill);grad.addColorStop(1,(beginnerColor&&isTarget)?"#7dd3fc":"#cbd5e1");ctx.fillStyle=grad;ctx.fill();
+      ctx.lineWidth=hinted?4:2;ctx.strokeStyle=hinted?"#facc15":"rgba(15,23,42,.28)";ctx.stroke();ctx.shadowBlur=0;
+      ctx.globalAlpha=.23;ctx.fillStyle="#0f172a";for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(-e.w/2+20+i*e.w/3,-e.h/2+12+(i%2)*18,3+i,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+      ctx.fillStyle="#020617";
+      const label = e.type==="ja" ? e.word.ja : e.word.en;
+      ctx.font=`1000 ${Math.min(26,Math.max(17, (e.type==="ja"?260:220)/label.length))}px system-ui,-apple-system,sans-serif`;
+      ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label,0,2);ctx.restore();
+    }
+  }
+  function roundRect(x,y,w,h,r){const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();}
+  function drawParticles(){for(const p of state.particles){ctx.save();ctx.globalAlpha=Math.max(0,p.life/56);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.restore();}}
+  function drawRings(){for(const r of state.rings){ctx.save();ctx.globalAlpha=Math.max(0,r.life/32);ctx.strokeStyle=r.color;ctx.lineWidth=4;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();ctx.restore();}}
+
+  function loop(){update();draw();}
+
+  // Buttons
+  $("playBtn").onclick=()=>startGame(state.words);
+  $("beginnerBtn").onclick=()=>setDifficulty("beginner");
+  $("normalBtn").onclick=()=>setDifficulty("normal");
+  $("hardBtn").onclick=()=>setDifficulty("hard");
+  $("wordsBtn").onclick=()=>{refreshWordUI();showScreen("wordsScreen");};
+  $("backBtn").onclick=()=>showScreen("startScreen");
+  $("applyWordsBtn").onclick=()=>{const words=parseWords($("wordInput").value);if(words.length<3){alert("ことばを3つ以上入れてください。");return;}state.words=words.slice(0,30);saveWords(state.words);startGame(state.words);};
+  $("resetWordsBtn").onclick=()=>{state.words=DEFAULT_WORDS.slice();saveWords(state.words);refreshWordUI();};
+  $("progressBtn").onclick=()=>{refreshProgressUI();showScreen("progressScreen");};
+  $("progressBackBtn").onclick=()=>showScreen("startScreen");
+  $("reviewWeakBtn").onclick=()=>{const weak=state.words.slice().sort((a,b)=>(state.progress.weak[b.en]||0)-(state.progress.weak[a.en]||0)).filter(w=>(state.progress.weak[w.en]||0)>0).slice(0,Math.min(8,state.words.length));startGame(weak.length>=3?weak:state.words);};
+  $("resetProgressBtn").onclick=()=>{if(confirm("記録を消しますか？")){state.progress={coins:0,totalPlays:0,best:{beginner:0,normal:0,hard:0,bonus:0},weak:{},unlockedBonus:false};saveProgress();refreshProgressUI();}};
+  $("pauseBtn").onclick=()=>pauseGame();
+  $("resumeBtn").onclick=()=>resumeGame();
+  $("restartBtn").onclick=()=>startGame(state.words);
+  $("homeBtn").onclick=()=>{state.running=false;showScreen("startScreen");};
+  $("againBtn").onclick=()=>startGame(state.words);
+  $("reviewBtn").onclick=()=>{const list=state.lastReviewWords||[];startGame(list.length>=3?list:state.words);};
+  $("titleBtn").onclick=()=>showScreen("startScreen");
+  $("bonusBtn").onclick=()=>startBonusGame();
+  $("bonusHomeBtn").onclick=()=>startBonusGame();
+
+  function pauseGame(){if(!state.running)return;state.paused=true;showScreen("pauseScreen");}
+  function resumeGame(){state.paused=false;state.bonusLastTime=performance.now();showScreen(null);}
+
+  document.addEventListener("keydown",e=>{state.keys[e.key]=true;if(e.code==="Space"){e.preventDefault();shoot();}if(e.key==="Escape")pauseGame();},{passive:false});
+  document.addEventListener("keyup",e=>{state.keys[e.key]=false;});
+  canvas.addEventListener("pointerdown",e=>{if(!state.running||state.paused)return;state.player.x=Math.max(32,Math.min(state.W-32,e.clientX));shoot();});
+  canvas.addEventListener("pointermove",e=>{if(!state.running||state.paused)return;if(e.pointerType==="touch"||e.buttons){state.player.x=Math.max(32,Math.min(state.W-32,e.clientX));}});
+  function holdBtn(el,dir){const down=e=>{e.preventDefault();state.touchDir=dir;};const up=e=>{e.preventDefault();if(state.touchDir===dir)state.touchDir=0;};el.addEventListener("pointerdown",down);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",up);el.addEventListener("pointerleave",up);}
+  holdBtn($("leftBtn"),-1);holdBtn($("rightBtn"),1);$("fireBtn").addEventListener("pointerdown",e=>{e.preventDefault();shoot();});
+  window.addEventListener("resize",resize);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running)pauseGame();});
+  document.addEventListener("touchmove",e=>{if(e.target&&e.target.tagName==="TEXTAREA")return;e.preventDefault();},{passive:false});
+
+  refreshWordUI();setDifficulty("beginner");updateHomeUnlock();resize();loop();
+})();
+</script>
+</body>
+</html>
