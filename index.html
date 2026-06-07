@@ -315,6 +315,7 @@
 
   const WORD_BANK_VERSION = "family-v2";
   const REST_EVERY = 3;
+  const QUESTION_ROUND_KEY = "wbqQuestionRoundFamilyV1";
   const DEFAULT_WORDS = [
     ["wife","おくさん","partner-female"],
     ["uncle","おじさん","uncle"],
@@ -561,7 +562,7 @@
     state.mode="main";
     state.words=(words&&words.length>=3?words:state.words).slice(0,30);
     saveWords(state.words);
-    state.questions = weightedQuestions();
+    state.questions = rotatingQuestions();
     state.index=0; state.score=0; state.combo=0; state.bestCombo=0;
     state.shield = state.difficulty==="hard" ? 2 : 3;
     state.wrongMap={}; state.correctCount=0; state.player.x=state.W/2;
@@ -573,13 +574,22 @@
     updateHUD();
   }
 
-  function weightedQuestions(){
-    // Weak words appear earlier but all words are still included when possible.
-    const base=state.words.slice();
-    const weak=state.progress.weak || {};
-    base.sort((a,b)=>(weak[b.en]||0)-(weak[a.en]||0)+Math.random()-.5);
-    const limit=Math.min(15,base.length);
-    return base.slice(0,limit);
+  function nextQuestionRound(){
+    try{
+      const current=Math.max(0,Number(localStorage.getItem(QUESTION_ROUND_KEY)) || 0);
+      localStorage.setItem(QUESTION_ROUND_KEY,String(current+1));
+      return current;
+    }catch(e){
+      nextQuestionRound.memory=(nextQuestionRound.memory || 0)+1;
+      return nextQuestionRound.memory-1;
+    }
+  }
+
+  function rotatingQuestions(){
+    const base=state.words.slice(0,Math.min(15,state.words.length));
+    if(!base.length) return base;
+    const shift=nextQuestionRound() % base.length;
+    return base.slice(shift).concat(base.slice(0,shift));
   }
 
   function relatedChoicesFor(target,count){
