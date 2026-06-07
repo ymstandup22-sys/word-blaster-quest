@@ -423,6 +423,14 @@
     seq: 0,
     timer: 0
   };
+  const backgroundArt = {
+    image: typeof Image==="function" ? new Image() : null,
+    ready:false
+  };
+  if(backgroundArt.image){
+    backgroundArt.image.onload=()=>{backgroundArt.ready=true;};
+    backgroundArt.image.src="assets/evening-school-family-bg.jpg";
+  }
 
   const screens = ["startScreen","wordsScreen","progressScreen","pauseScreen","resultScreen"].map($);
 
@@ -731,11 +739,6 @@
     ],1150,{cancel:false});
   }
 
-  function speakRestCoach(rest){
-    if(!rest) return;
-    speakSequence([{text:`${rest.title}。${rest.body}`,lang:"ja-JP",rate:.86,pitch:1.04,volume:.9,pause:0}],0,{cancel:false});
-  }
-
   function speakSequence(items,delay=0,options={}){
     if(!speech.available || !state.voiceEnabled) return;
     refreshVoices();
@@ -865,7 +868,6 @@
           <p class="restWord">${escapeHtml(rest.title)}</p>
           <p class="restMeaning">${escapeHtml(rest.body)}</p>
         </div>`;
-      setTimeout(()=>speakRestCoach(rest),1800);
     },cardMs);
     setTimeout(()=>{
       overlay.className="restBreak";
@@ -1106,24 +1108,55 @@
     const word = state.mode==="bonus" ? state.bonusTarget : state.target;
     const theme = THEMES[(word&&word.theme)||"friend"] || THEMES.friend;
     const time = performance.now()*.001;
-    const g=ctx.createLinearGradient(0,0,state.W,state.H);
-    g.addColorStop(0,theme.bg1);g.addColorStop(1,theme.bg2);
-    ctx.fillStyle=g;ctx.fillRect(0,0,state.W,state.H);
+    if(backgroundArt.ready){
+      drawCoverImage(backgroundArt.image);
+      ctx.save();
+      const shade=ctx.createLinearGradient(0,0,state.W,state.H);
+      shade.addColorStop(0,"rgba(2,6,23,.55)");
+      shade.addColorStop(.48,"rgba(2,6,23,.28)");
+      shade.addColorStop(1,"rgba(2,6,23,.62)");
+      ctx.fillStyle=shade;
+      ctx.fillRect(0,0,state.W,state.H);
+      const glow=ctx.createRadialGradient(state.W*.5,state.H*.45,0,state.W*.5,state.H*.45,Math.max(state.W,state.H)*.72);
+      glow.addColorStop(0,hexToRgba(theme.accent,.18));
+      glow.addColorStop(.55,"rgba(15,23,42,0)");
+      glow.addColorStop(1,"rgba(15,23,42,.34)");
+      ctx.fillStyle=glow;
+      ctx.fillRect(0,0,state.W,state.H);
+      ctx.restore();
+    } else {
+      const g=ctx.createLinearGradient(0,0,state.W,state.H);
+      g.addColorStop(0,theme.bg1);g.addColorStop(1,theme.bg2);
+      ctx.fillStyle=g;ctx.fillRect(0,0,state.W,state.H);
+    }
 
     drawAtmosphere(theme,time);
 
-    for(const s of state.stars){ctx.globalAlpha=.34+Math.sin(s.tw)*.14;ctx.fillStyle="#ffffff";ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
-    ctx.globalAlpha=1;
+    if(!backgroundArt.ready){
+      for(const s of state.stars){ctx.globalAlpha=.34+Math.sin(s.tw)*.14;ctx.fillStyle="#ffffff";ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1;
+    }
 
-    if(word){
+    if(word && !backgroundArt.ready){
       drawMemoryScene(theme,time);
     }
 
-    ctx.save();ctx.globalAlpha=.16;ctx.strokeStyle=theme.accent;ctx.lineWidth=1;
-    const horizon=state.H*.72;
-    for(let i=0;i<12;i++){const y=horizon+i*i*3.2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(state.W,y);ctx.stroke();}
-    for(let i=-8;i<=8;i++){ctx.beginPath();ctx.moveTo(state.W/2,horizon);ctx.lineTo(state.W/2+i*state.W/7,state.H);ctx.stroke();}
-    ctx.restore();
+    if(!backgroundArt.ready){
+      ctx.save();ctx.globalAlpha=.16;ctx.strokeStyle=theme.accent;ctx.lineWidth=1;
+      const horizon=state.H*.72;
+      for(let i=0;i<12;i++){const y=horizon+i*i*3.2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(state.W,y);ctx.stroke();}
+      for(let i=-8;i<=8;i++){ctx.beginPath();ctx.moveTo(state.W/2,horizon);ctx.lineTo(state.W/2+i*state.W/7,state.H);ctx.stroke();}
+      ctx.restore();
+    }
+  }
+
+  function drawCoverImage(img){
+    const iw=img.naturalWidth || img.width;
+    const ih=img.naturalHeight || img.height;
+    if(!iw || !ih) return;
+    const scale=Math.max(state.W/iw,state.H/ih);
+    const w=iw*scale,h=ih*scale;
+    ctx.drawImage(img,(state.W-w)/2,(state.H-h)/2,w,h);
   }
 
   function drawAtmosphere(theme,time){
