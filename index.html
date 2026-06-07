@@ -330,6 +330,14 @@
     ["aunt","おば","aunt"]
   ].map(([en,ja,theme])=>({en,ja,theme}));
   const RECORDED_WORDS = new Set(DEFAULT_WORDS.map(word=>word.en));
+  const REST_PROMPTS = [
+    {title:"よくできたね", body:"ゆっくり深呼吸しよう。"},
+    {title:"いい集中でした", body:"肩をくるっとほぐそう。"},
+    {title:"目も休めよう", body:"目を閉じてもいいよ。"},
+    {title:"その調子", body:"背中をのばして、ふうっと息を吐こう。"},
+    {title:"すばらしい一問", body:"手をゆるめて、首と肩を休ませよう。"},
+    {title:"落ち着いていこう", body:"鼻から吸って、口からゆっくり吐こう。"}
+  ];
 
   const THEMES = {
     "partner-female": {bg1:"#331131",bg2:"#7c2d12",accent:"#fb7185",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"wife",note:"married partner"},
@@ -723,6 +731,11 @@
     ],1150,{cancel:false});
   }
 
+  function speakRestCoach(rest){
+    if(!rest) return;
+    speakSequence([{text:`${rest.title}。${rest.body}`,lang:"ja-JP",rate:.86,pitch:1.04,volume:.9,pause:0}],0,{cancel:false});
+  }
+
   function speakSequence(items,delay=0,options={}){
     if(!speech.available || !state.voiceEnabled) return;
     refreshVoices();
@@ -832,6 +845,7 @@
 
   function showRestBreak(word,onDone){
     const overlay=$("restBreak");
+    const rest=nextRestPrompt();
     const cardMs=2300;
     const darkRestMs=7000;
     overlay.className="restBreak show";
@@ -848,9 +862,10 @@
       overlay.innerHTML=`
         <div class="restCard">
           <div class="restLabel">おやすみタイム</div>
-          <p class="restWord">目を休めよう</p>
-          <p class="restMeaning">すこし暗くして、目と神経を休めます。</p>
+          <p class="restWord">${escapeHtml(rest.title)}</p>
+          <p class="restMeaning">${escapeHtml(rest.body)}</p>
         </div>`;
+      setTimeout(()=>speakRestCoach(rest),1800);
     },cardMs);
     setTimeout(()=>{
       overlay.className="restBreak";
@@ -867,6 +882,17 @@
       cousin:"👦👧", uncle:"👨", aunt:"👩", niece:"👧"
     };
     return icons[key] || "😊";
+  }
+
+  function nextRestPrompt(){
+    if(!nextRestPrompt.bag || !nextRestPrompt.bag.length) nextRestPrompt.bag=shuffle(REST_PROMPTS);
+    let prompt=nextRestPrompt.bag.pop();
+    if(nextRestPrompt.last && prompt.title===nextRestPrompt.last && nextRestPrompt.bag.length){
+      nextRestPrompt.bag.unshift(prompt);
+      prompt=nextRestPrompt.bag.pop();
+    }
+    nextRestPrompt.last=prompt.title;
+    return prompt;
   }
 
   function addParticles(x,y,kind="good",amount=24){
