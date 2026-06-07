@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Word Blaster">
 <meta name="theme-color" content="#050816">
-<title>Word Blaster Quest - High School Vocabulary</title>
+<title>Word Blaster Quest - Offline Family Words</title>
 <style>
   :root{
     --bg:#050816;
@@ -174,7 +174,7 @@
       <div class="statBox">
         <div>点 <span id="score">0</span></div>
         <div>つづけて正解 <span id="combo">0</span></div>
-        <div>問題 <span id="stage">1</span>/<span id="total">15</span></div>
+        <div>問題 <span id="stage">1</span>/<span id="total">14</span></div>
         <div>あと <span id="shield">★★★</span></div>
         <div>最高 <span id="bestScore">0</span></div>
         <div>コイン <span id="coins">0</span></div>
@@ -200,7 +200,7 @@
     <div class="card">
       <h1 class="logo">英語<br>ことば<br>トレーニング</h1>
       <p class="subtitle">
-        高校生でよく出る英単語を、絵を見ながら練習します。<br>
+        家族や身近な人を表す英語を、絵を見ながら練習します。<br>
         意味を見て、合う英語をうちます。
       </p>
       <div class="badgeRow">
@@ -249,7 +249,7 @@
       <textarea id="wordInput"></textarea>
       <div class="btnRow">
         <button id="applyWordsBtn">これで始める</button>
-        <button id="resetWordsBtn" class="secondary">もとの15語にもどす</button>
+        <button id="resetWordsBtn" class="secondary">もとの14語にもどす</button>
         <button id="backBtn" class="secondary">もどる</button>
       </div>
     </div>
@@ -313,24 +313,23 @@
 (() => {
   "use strict";
 
-  const WORD_BANK_VERSION = "high-school-v1";
+  const WORD_BANK_VERSION = "family-v2";
   const REST_EVERY = 3;
   const DEFAULT_WORDS = [
-    ["environment","かんきょう","environment"],
-    ["society","社会","society"],
-    ["culture","文化","culture"],
-    ["education","教育","education"],
-    ["technology","ぎじゅつ","technology"],
-    ["information","じょうほう","information"],
-    ["energy","エネルギー","energy"],
-    ["experience","けいけん","experience"],
-    ["opportunity","きかい","opportunity"],
-    ["responsibility","せきにん","responsibility"],
-    ["solution","かいけつ","solution"],
-    ["evidence","しょうこ","evidence"],
-    ["increase","ふえる","increase"],
-    ["reduce","へらす","reduce"],
-    ["improve","よくする","improve"]
+    ["wife","おくさん","partner-female"],
+    ["uncle","おじさん","uncle"],
+    ["sister","しまい","sister"],
+    ["niece","めい","niece"],
+    ["mother","おかあさん","mother"],
+    ["husband","だんなさん","partner-male"],
+    ["grandson","まごの おとこのこ","grandson"],
+    ["grandmother","おばあさん","grandmother"],
+    ["grandfather","おじいさん","grandfather"],
+    ["friend","ともだち","friend"],
+    ["daughter","むすめ","daughter"],
+    ["cousin","いとこ","cousin"],
+    ["brother","きょうだい","brother"],
+    ["aunt","おばさん","aunt"]
   ].map(([en,ja,theme])=>({en,ja,theme}));
   const RECORDED_WORDS = new Set(DEFAULT_WORDS.map(word=>word.en));
   const REST_PROMPTS = [
@@ -343,40 +342,37 @@
   ];
 
   const THEMES = {
-    environment:{bg1:"#052e16",bg2:"#0f766e",accent:"#86efac",accent2:"#67e8f9",icon:"leaf",scene:"concept",focus:"environment",note:"environment"},
-    society:{bg1:"#172554",bg2:"#334155",accent:"#93c5fd",accent2:"#fde68a",icon:"city",scene:"concept",focus:"society",note:"society"},
-    culture:{bg1:"#3b0764",bg2:"#9d174d",accent:"#f0abfc",accent2:"#facc15",icon:"art",scene:"concept",focus:"culture",note:"culture"},
-    education:{bg1:"#082f49",bg2:"#1d4ed8",accent:"#bfdbfe",accent2:"#facc15",icon:"book",scene:"concept",focus:"education",note:"education"},
-    technology:{bg1:"#0f172a",bg2:"#155e75",accent:"#67e8f9",accent2:"#c4b5fd",icon:"chip",scene:"concept",focus:"technology",note:"technology"},
-    information:{bg1:"#083344",bg2:"#1e3a8a",accent:"#67e8f9",accent2:"#fde68a",icon:"dots",scene:"concept",focus:"information",note:"information"},
-    energy:{bg1:"#422006",bg2:"#166534",accent:"#facc15",accent2:"#86efac",icon:"bolt",scene:"concept",focus:"energy",note:"energy"},
-    experience:{bg1:"#7c2d12",bg2:"#4338ca",accent:"#fdba74",accent2:"#c4b5fd",icon:"star",scene:"concept",focus:"experience",note:"experience"},
-    opportunity:{bg1:"#713f12",bg2:"#0f766e",accent:"#fde68a",accent2:"#67e8f9",icon:"door",scene:"concept",focus:"opportunity",note:"opportunity"},
-    responsibility:{bg1:"#1e1b4b",bg2:"#155e75",accent:"#bfdbfe",accent2:"#86efac",icon:"check",scene:"concept",focus:"responsibility",note:"responsibility"},
-    solution:{bg1:"#052e16",bg2:"#1e3a8a",accent:"#bef264",accent2:"#facc15",icon:"idea",scene:"concept",focus:"solution",note:"solution"},
-    evidence:{bg1:"#312e81",bg2:"#334155",accent:"#c4b5fd",accent2:"#67e8f9",icon:"search",scene:"concept",focus:"evidence",note:"evidence"},
-    increase:{bg1:"#064e3b",bg2:"#14532d",accent:"#86efac",accent2:"#facc15",icon:"up",scene:"concept",focus:"increase",note:"increase"},
-    reduce:{bg1:"#7f1d1d",bg2:"#92400e",accent:"#fdba74",accent2:"#fecaca",icon:"down",scene:"concept",focus:"reduce",note:"reduce"},
-    improve:{bg1:"#0f172a",bg2:"#0f766e",accent:"#67e8f9",accent2:"#fde68a",icon:"spark",scene:"concept",focus:"improve",note:"improve"},
-    friend:{bg1:"#083344",bg2:"#4338ca",accent:"#67e8f9",accent2:"#facc15",icon:"friends",scene:"friends",focus:"friend",note:"friendship"}
+    "partner-female": {bg1:"#331131",bg2:"#7c2d12",accent:"#fb7185",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"wife",note:"married partner"},
+    "partner-male": {bg1:"#0b2447",bg2:"#14532d",accent:"#60a5fa",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"husband",note:"married partner"},
+    "uncle": {bg1:"#172554",bg2:"#92400e",accent:"#fdba74",accent2:"#93c5fd",icon:"adultChild",scene:"uncleAunt",focus:"uncle",note:"parent's brother"},
+    "aunt": {bg1:"#3b0764",bg2:"#9d174d",accent:"#f0abfc",accent2:"#facc15",icon:"adultChild",scene:"uncleAunt",focus:"aunt",note:"parent's sister"},
+    "sister": {bg1:"#312e81",bg2:"#be185d",accent:"#c4b5fd",accent2:"#f9a8d4",icon:"twoKids",scene:"siblings",focus:"sister",note:"girl siblings"},
+    "brother": {bg1:"#082f49",bg2:"#166534",accent:"#67e8f9",accent2:"#bef264",icon:"twoKids",scene:"siblings",focus:"brother",note:"boy siblings"},
+    "niece": {bg1:"#3b0764",bg2:"#7f1d1d",accent:"#f9a8d4",accent2:"#facc15",icon:"littleGirl",scene:"niece",focus:"niece",note:"sibling's daughter"},
+    "daughter": {bg1:"#1e1b4b",bg2:"#9f1239",accent:"#f9a8d4",accent2:"#86efac",icon:"parentKid",scene:"daughter",focus:"daughter",note:"my child"},
+    "mother": {bg1:"#064e3b",bg2:"#7c2d12",accent:"#86efac",accent2:"#fdba74",icon:"parentKid",scene:"mother",focus:"mother",note:"parent and child"},
+    "grandson": {bg1:"#0f172a",bg2:"#1d4ed8",accent:"#93c5fd",accent2:"#facc15",icon:"elderKid",scene:"grandson",focus:"grandson",note:"grandchild"},
+    "grandmother": {bg1:"#3b0764",bg2:"#713f12",accent:"#f0abfc",accent2:"#facc15",icon:"elder",scene:"grandparent",focus:"grandmother",note:"grandparent"},
+    "grandfather": {bg1:"#0f172a",bg2:"#854d0e",accent:"#fdba74",accent2:"#93c5fd",icon:"elder",scene:"grandparent",focus:"grandfather",note:"grandparent"},
+    "friend": {bg1:"#083344",bg2:"#4338ca",accent:"#67e8f9",accent2:"#facc15",icon:"friends",scene:"friends",focus:"friend",note:"friendship"},
+    "cousin": {bg1:"#052e16",bg2:"#1e3a8a",accent:"#bef264",accent2:"#93c5fd",icon:"tree",scene:"cousin",focus:"cousin",note:"same generation family"}
   };
 
   const RELATED_CHOICES = {
-    environment:["environment","energy","society","technology","reduce","improve"],
-    society:["society","culture","education","information","responsibility","environment"],
-    culture:["culture","society","education","experience","information","opportunity"],
-    education:["education","information","culture","technology","experience","opportunity"],
-    technology:["technology","information","energy","society","solution","improve"],
-    information:["information","technology","education","evidence","society","solution"],
-    energy:["energy","environment","technology","increase","reduce","solution"],
-    experience:["experience","education","opportunity","culture","improve","responsibility"],
-    opportunity:["opportunity","experience","education","improve","society","responsibility"],
-    responsibility:["responsibility","society","education","evidence","solution","opportunity"],
-    solution:["solution","evidence","information","improve","technology","responsibility"],
-    evidence:["evidence","information","solution","responsibility","education","society"],
-    increase:["increase","reduce","energy","improve","environment","opportunity"],
-    reduce:["reduce","increase","environment","energy","solution","responsibility"],
-    improve:["improve","solution","opportunity","experience","technology","increase"]
+    wife:["wife","husband","mother","daughter","aunt"],
+    husband:["husband","wife","uncle","brother","mother"],
+    uncle:["uncle","aunt","cousin","brother","grandfather","mother"],
+    aunt:["aunt","uncle","cousin","sister","grandmother","mother"],
+    sister:["sister","brother","cousin","friend","daughter","niece"],
+    brother:["brother","sister","cousin","friend","grandson","uncle"],
+    niece:["niece","daughter","sister","aunt","cousin","friend"],
+    daughter:["daughter","mother","niece","sister","grandson","wife"],
+    mother:["mother","daughter","grandmother","aunt","sister","wife"],
+    grandson:["grandson","grandmother","grandfather","daughter","brother"],
+    grandmother:["grandmother","grandfather","mother","aunt","grandson"],
+    grandfather:["grandfather","grandmother","uncle","mother","grandson"],
+    friend:["friend","brother","sister","cousin","niece"],
+    cousin:["cousin","friend","brother","sister","uncle","aunt"]
   };
 
   const $ = id => document.getElementById(id);
@@ -880,9 +876,9 @@
   function restIcon(word){
     const key=(word&&word.en)||"friend";
     const icons={
-      environment:"🌱", society:"🏙️", culture:"🎨", education:"📘", technology:"💻",
-      information:"ℹ️", energy:"⚡", experience:"✨", opportunity:"🚪", responsibility:"✅",
-      solution:"💡", evidence:"🔎", increase:"⬆️", reduce:"⬇️", improve:"🌟"
+      grandmother:"👵", grandfather:"👴", grandson:"👦", husband:"👨", wife:"👩",
+      mother:"👩‍👧", daughter:"👧", sister:"👧", brother:"👦", friend:"😊😊",
+      cousin:"👦👧", uncle:"👨", aunt:"👩", niece:"👧"
     };
     return icons[key] || "😊";
   }
