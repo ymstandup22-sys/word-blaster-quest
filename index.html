@@ -144,6 +144,13 @@
     font-size:clamp(60px,15vw,112px);background:linear-gradient(180deg,#e0f2fe,#dcfce7);
     border:2px solid rgba(103,232,249,.35);box-shadow:inset 0 -18px 0 rgba(34,197,94,.18),0 18px 42px rgba(0,0,0,.28);
   }
+  .restPicture.imageCard{
+    background-image:linear-gradient(180deg,rgba(255,255,255,.04),rgba(2,6,23,.18)),url("assets/evening-school-family-bg.jpg");
+    background-size:cover;
+    background-position:center;
+    box-shadow:0 18px 42px rgba(0,0,0,.3);
+    font-size:0;
+  }
   .restBreak.dark .restPicture{display:none;}
   .restWord{font-size:clamp(30px,6vw,54px);font-weight:1000;line-height:1;margin:0;color:#fde68a;}
   .restMeaning{font-size:clamp(18px,3.5vw,28px);font-weight:900;line-height:1.45;margin:0;color:#dbeafe;}
@@ -862,7 +869,7 @@
     overlay.innerHTML=`
       <div class="restCard">
         <div class="restLabel">確認</div>
-        <div class="restPicture" aria-hidden="true">${escapeHtml(restIcon(word))}</div>
+        <div class="restPicture imageCard" aria-hidden="true"></div>
         <p class="restWord">${escapeHtml(word.en)}</p>
         <p class="restMeaning">${escapeHtml(word.ja)}</p>
       </div>`;
@@ -881,6 +888,24 @@
       overlay.innerHTML="";
       onDone();
     },cardMs+darkRestMs);
+  }
+
+  function showConfirmCard(word,onDone){
+    const overlay=$("restBreak");
+    const cardMs=1050;
+    overlay.className="restBreak show";
+    overlay.innerHTML=`
+      <div class="restCard">
+        <div class="restLabel">確認</div>
+        <div class="restPicture" aria-hidden="true">${escapeHtml(restIcon(word))}</div>
+        <p class="restWord">${escapeHtml(word.en)}</p>
+        <p class="restMeaning">${escapeHtml(word.ja)}</p>
+      </div>`;
+    setTimeout(()=>{
+      overlay.className="restBreak";
+      overlay.innerHTML="";
+      onDone();
+    },cardMs);
   }
 
   function restIcon(word){
@@ -935,7 +960,13 @@
         });
       },540);
     }else{
-      setTimeout(()=>{ if(state.running) nextRound(); },720);
+      state.paused=true;
+      setTimeout(()=>{
+        showConfirmCard(state.target, ()=>{
+          state.paused=false;
+          if(state.running) nextRound();
+        });
+      },420);
     }
   }
 
