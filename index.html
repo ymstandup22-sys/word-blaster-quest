@@ -204,7 +204,7 @@
         意味を見て、合う英語をうちます。
       </p>
       <div class="badgeRow">
-        <div class="badge">1つのファイルで使える</div>
+        <div class="badge">URLだけで使える</div>
         <div class="badge">オフラインでもOK</div>
         <div class="badge">絵でイメージ</div>
         <div class="badge">かんたん / ふつう / チャレンジ</div>
@@ -227,6 +227,7 @@
       </div>
       <div class="btnRow">
         <button id="playBtn">スタート</button>
+        <button id="voiceHomeBtn" class="secondary">音声オン</button>
         <button id="beginnerBtn" class="secondary modeSelected">かんたん</button>
         <button id="normalBtn" class="secondary">ふつう</button>
         <button id="hardBtn" class="secondary">チャレンジ</button>
@@ -328,6 +329,7 @@
     ["brother","男のきょうだい","brother"],
     ["aunt","おば","aunt"]
   ].map(([en,ja,theme])=>({en,ja,theme}));
+  const RECORDED_WORDS = new Set(DEFAULT_WORDS.map(word=>word.en));
 
   const THEMES = {
     "partner-female": {bg1:"#331131",bg2:"#7c2d12",accent:"#fb7185",accent2:"#facc15",icon:"ring",scene:"spouse",focus:"wife",note:"married partner"},
@@ -401,7 +403,17 @@
     bonusTimeLeft:30,
     bonusTarget:null,
     bonusLastTime:0,
-    progress: loadProgress()
+    progress: loadProgress(),
+    voiceEnabled: loadVoicePreference()
+  };
+
+  const speech = {
+    available: "Audio" in window || ("speechSynthesis" in window && "SpeechSynthesisUtterance" in window),
+    ttsAvailable: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+    voices: [],
+    audio: null,
+    seq: 0,
+    timer: 0
   };
 
   const screens = ["startScreen","wordsScreen","progressScreen","pauseScreen","resultScreen"].map($);
@@ -475,6 +487,15 @@
     }catch(e){return base;}
   }
   function saveProgress(){try{localStorage.setItem("wbqProgress", JSON.stringify(state.progress));}catch(e){}}
+  function loadVoicePreference(){
+    try{
+      const raw=localStorage.getItem("wbqVoiceEnabled");
+      return raw===null ? true : raw==="1";
+    }catch(e){return true;}
+  }
+  function saveVoicePreference(enabled){
+    try{localStorage.setItem("wbqVoiceEnabled", enabled ? "1" : "0");}catch(e){}
+  }
 
   function setDifficulty(mode){
     state.difficulty = mode;
@@ -517,6 +538,7 @@
   }
 
   function startGame(words){
+    initSpeech();
     state.mode="main";
     state.words=(words&&words.length>=3?words:state.words).slice(0,30);
     saveWords(state.words);
@@ -565,6 +587,7 @@
     state.bullets=[];
     spawnEnemies();
     updateHUD();
+    speakPrompt(state.target);
   }
 
   function spawnEnemies(){
@@ -608,6 +631,7 @@
     $("shield").textContent="★".repeat(state.shield)+"☆".repeat(Math.max(0,3-state.shield));
     $("xpFill").style.width = state.mode==="bonus" ? `${Math.max(0,Math.min(100,state.bonusTimeLeft/30*100))}%` : `${Math.round((state.index/Math.max(1,state.questions.length))*100)}%`;
     updateHomeUnlock();
+    updateVoiceButton();
   }
 
   function shoot(){
@@ -631,6 +655,175 @@
     }catch(e){}
   }
 
+  function initSpeech(){
+    if(!speech.available){updateVoiceButton();return;}
+    refreshVoices();
+    if(speech.ttsAvailable) window.speechSynthesis.onvoiceschanged=()=>refreshVoices();
+    updateVoiceButton();
+  }
+
+  function refreshVoices(){
+    if(!speech.ttsAvailable) return;
+    speech.voices=window.speechSynthesis.getVoices() || [];
+  }
+
+  function updateVoiceButton(){
+    ["voiceBtn","voiceHomeBtn"].forEach(id=>{
+      const btn=$(id);
+      if(!btn) return;
+      if(!speech.available){
+        btn.textContent="音声オフ";
+        btn.disabled=true;
+        return;
+      }
+      btn.disabled=false;
+      btn.textContent=state.voiceEnabled ? "音声オン" : "音声オフ";
+    });
+  }
+
+  function toggleVoice(){
+    state.voiceEnabled=!state.voiceEnabled;
+    saveVoicePreference(state.voiceEnabled);
+    updateVoiceButton();
+    if(state.voiceEnabled){
+      refreshVoices();
+      if(state.running && !state.paused && state.mode==="main" && state.target) speakPrompt(state.target);
+    } else {
+      stopSpeech();
+    }
+  }
+
+  function stopSpeech(){
+    speech.seq++;
+    clearTimeout(speech.timer);
+    if(speech.audio){
+      try{speech.audio.pause();speech.audio.currentTime=0;}catch(e){}
+      speech.audio=null;
+    }
+    if(speech.ttsAvailable){
+      try{window.speechSynthesis.cancel();}catch(e){}
+    }
+  }
+
+  function speakPrompt(word){
+    if(!word) return;
+    speakSequence([{word,text:word.ja,lang:"ja-JP",rate:.88,pitch:1.04,volume:.9,pause:0}],160);
+  }
+
+  function speakCorrectEnglish(word){
+    if(!word) return;
+    speakSequence([{word,text:word.en,lang:"en-US",rate:.76,pitch:1.03,volume:1,pause:0}],0);
+  }
+
+  function speakReward(word){
+    if(!word) return;
+    speakSequence([
+      {word,text:word.ja,lang:"ja-JP",rate:.86,pitch:1.04,volume:.96,pause:280},
+      {word,text:word.en,lang:"en-US",rate:.78,pitch:1.03,volume:1,pause:0}
+    ],1150,{cancel:false});
+  }
+
+  function speakSequence(items,delay=0,options={}){
+    if(!speech.available || !state.voiceEnabled) return;
+    refreshVoices();
+    const queue=items.slice();
+    const shouldCancel=options.cancel!==false;
+    const seq=shouldCancel ? ++speech.seq : speech.seq;
+    clearTimeout(speech.timer);
+    if(shouldCancel){
+      try{window.speechSynthesis.cancel();}catch(e){}
+    }
+    const next=()=>{
+      if(seq!==speech.seq || !state.voiceEnabled) return;
+      const item=queue.shift();
+      if(!item) return;
+      if(playRecorded(item,seq,next)) return;
+      speakUtterance(item,seq,next);
+    };
+    speech.timer=setTimeout(next,delay);
+  }
+
+  function playRecorded(item,seq,next){
+    const src=recordedAudioSrc(item);
+    if(!src || typeof Audio==="undefined") return false;
+    try{
+      const audio=new Audio(src);
+      let finished=false;
+      const done=()=>{
+        if(finished) return;
+        finished=true;
+        if(speech.audio===audio) speech.audio=null;
+        if(seq===speech.seq && state.voiceEnabled) speech.timer=setTimeout(next,item.pause || 0);
+      };
+      const fallback=()=>{
+        if(finished) return;
+        finished=true;
+        if(speech.audio===audio) speech.audio=null;
+        speakUtterance(item,seq,next);
+      };
+      speech.audio=audio;
+      audio.preload="auto";
+      audio.volume=item.volume ?? 1;
+      audio.onended=done;
+      audio.onerror=fallback;
+      const playing=audio.play();
+      if(playing && playing.catch) playing.catch(fallback);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  function recordedAudioSrc(item){
+    const word=item.word && item.word.en ? String(item.word.en).toLowerCase() : "";
+    if(!RECORDED_WORDS.has(word)) return "";
+    const prefix=String(item.lang || "").toLowerCase().startsWith("ja") ? "ja" : "en";
+    return `audio/${prefix}-${word}.wav`;
+  }
+
+  function speakUtterance(item,seq,next){
+    if(!speech.ttsAvailable){
+      if(seq===speech.seq) speech.timer=setTimeout(next,item.pause || 0);
+      return;
+    }
+    try{
+      const u=new SpeechSynthesisUtterance(item.text);
+      u.lang=item.lang;
+      u.rate=item.rate;
+      u.pitch=item.pitch;
+      u.volume=item.volume;
+      const voice=pickVoice(item.lang);
+      if(voice) u.voice=voice;
+      const after=()=>{if(seq===speech.seq)speech.timer=setTimeout(next,item.pause || 0);};
+      u.onend=after;
+      u.onerror=after;
+      window.speechSynthesis.speak(u);
+    }catch(e){
+      if(seq===speech.seq) speech.timer=setTimeout(next,item.pause || 0);
+    }
+  }
+
+  function pickVoice(lang){
+    const base=lang.toLowerCase();
+    const voices=speech.voices.length ? speech.voices : (speech.ttsAvailable ? window.speechSynthesis.getVoices() : []);
+    return voices
+      .filter(v=>String(v.lang || "").toLowerCase().startsWith(base.slice(0,2)))
+      .sort((a,b)=>voiceScore(b,base)-voiceScore(a,base))[0] || null;
+  }
+
+  function voiceScore(voice,base){
+    const name=String(voice.name || "").toLowerCase();
+    const lang=String(voice.lang || "").toLowerCase();
+    let score=0;
+    if(lang===base) score+=90;
+    else if(lang.startsWith(base.slice(0,2))) score+=45;
+    if(/google|natural|neural|premium|enhanced|microsoft|siri/.test(name)) score+=38;
+    if(base.startsWith("en") && /us english|english united states|samantha|ava|allison|daniel/.test(name)) score+=22;
+    if(base.startsWith("ja") && /日本|japan|kyoko|otoya|nanami|haruka|ichiro/.test(name)) score+=26;
+    if(!voice.localService) score+=6;
+    return score;
+  }
+
   function toast(msg,kind="good"){
     const el=$("toast");el.textContent=msg;
     el.style.color=kind==="good"?"#bbf7d0":kind==="bad"?"#fecaca":"#fef08a";
@@ -649,6 +842,7 @@
         <p class="restWord">${escapeHtml(word.en)}</p>
         <p class="restMeaning">${escapeHtml(word.ja)}</p>
       </div>`;
+    speakReward(word);
     setTimeout(()=>{
       overlay.className="restBreak show dark";
       overlay.innerHTML=`
@@ -693,6 +887,7 @@
     const gain=Math.round((100+comboBonus+timeBonus)*set.scoreMult);
     state.score+=gain;state.correctCount++;
     reduceWeak(state.target.en);
+    speakCorrectEnglish(state.target);
     toast(`正解 +${gain}`,"good");addParticles(enemy.x,enemy.y,"good",34);addRing(enemy.x,enemy.y,"#86efac");
     beep(780,.07,"triangle",.055);setTimeout(()=>beep(1040,.08,"triangle",.04),70);
     state.index++;updateHUD();
@@ -724,6 +919,7 @@
   function slowCorrectEnemy(){state.enemies.forEach(e=>{if(e.word.en===state.target.en){e.vx*=.45;e.vy*=.45;}});}
 
   function finishGame(){
+    stopSpeech();
     state.running=false;
     const wrongs=Object.values(state.wrongMap);
     state.lastReviewWords=wrongs;
@@ -762,6 +958,7 @@
   }
 
   function startBonusGame(){
+    stopSpeech();
     state.mode="bonus";state.running=true;state.paused=false;
     state.score=0;state.combo=0;state.bestCombo=0;state.shield=3;state.bullets=[];state.particles=[];state.rings=[];
     state.bonusTimeLeft=30;state.bonusLastTime=performance.now();state.player.x=state.W/2;
@@ -793,6 +990,7 @@
   }
 
   function finishBonus(){
+    stopSpeech();
     state.running=false;
     const coinsEarned=Math.max(1,Math.floor(state.score/450));
     state.progress.coins=(state.progress.coins||0)+coinsEarned;
@@ -1250,17 +1448,24 @@
   $("reviewWeakBtn").onclick=()=>{const weak=state.words.slice().sort((a,b)=>(state.progress.weak[b.en]||0)-(state.progress.weak[a.en]||0)).filter(w=>(state.progress.weak[w.en]||0)>0).slice(0,Math.min(8,state.words.length));startGame(weak.length>=3?weak:state.words);};
   $("resetProgressBtn").onclick=()=>{if(confirm("記録を消しますか？")){state.progress={coins:0,totalPlays:0,best:{beginner:0,normal:0,hard:0,bonus:0},weak:{},unlockedBonus:false};saveProgress();refreshProgressUI();}};
   $("pauseBtn").onclick=()=>pauseGame();
+  $("voiceBtn").onclick=()=>toggleVoice();
+  $("voiceHomeBtn").onclick=()=>toggleVoice();
   $("resumeBtn").onclick=()=>resumeGame();
   $("restartBtn").onclick=()=>startGame(state.words);
-  $("homeBtn").onclick=()=>{state.running=false;showScreen("startScreen");};
+  $("homeBtn").onclick=()=>{state.running=false;stopSpeech();showScreen("startScreen");};
   $("againBtn").onclick=()=>startGame(state.words);
   $("reviewBtn").onclick=()=>{const list=state.lastReviewWords||[];startGame(list.length>=3?list:state.words);};
-  $("titleBtn").onclick=()=>showScreen("startScreen");
+  $("titleBtn").onclick=()=>{stopSpeech();showScreen("startScreen");};
   $("bonusBtn").onclick=()=>startBonusGame();
   $("bonusHomeBtn").onclick=()=>startBonusGame();
 
-  function pauseGame(){if(!state.running)return;state.paused=true;showScreen("pauseScreen");}
-  function resumeGame(){state.paused=false;state.bonusLastTime=performance.now();showScreen(null);}
+  function pauseGame(){if(!state.running)return;state.paused=true;stopSpeech();showScreen("pauseScreen");}
+  function resumeGame(){
+    state.paused=false;
+    state.bonusLastTime=performance.now();
+    showScreen(null);
+    if(state.mode==="main" && state.target) speakPrompt(state.target);
+  }
 
   document.addEventListener("keydown",e=>{state.keys[e.key]=true;if(e.code==="Space"){e.preventDefault();shoot();}if(e.key==="Escape")pauseGame();},{passive:false});
   document.addEventListener("keyup",e=>{state.keys[e.key]=false;});
@@ -1272,7 +1477,7 @@
   document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running)pauseGame();});
   document.addEventListener("touchmove",e=>{if(e.target&&e.target.tagName==="TEXTAREA")return;e.preventDefault();},{passive:false});
 
-  refreshWordUI();setDifficulty("beginner");updateHomeUnlock();resize();loop();
+  initSpeech();refreshWordUI();setDifficulty("beginner");updateHomeUnlock();resize();loop();
 })();
 </script>
 </body>
