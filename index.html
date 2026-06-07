@@ -639,6 +639,8 @@
 
   function showRestBreak(word,onDone){
     const overlay=$("restBreak");
+    const cardMs=2300;
+    const darkRestMs=7000;
     overlay.className="restBreak show";
     overlay.innerHTML=`
       <div class="restCard">
@@ -655,12 +657,12 @@
           <p class="restWord">目を休めよう</p>
           <p class="restMeaning">すこし暗くして、目と神経を休めます。</p>
         </div>`;
-    },2300);
+    },cardMs);
     setTimeout(()=>{
       overlay.className="restBreak";
       overlay.innerHTML="";
       onDone();
-    },5000);
+    },cardMs+darkRestMs);
   }
 
   function restIcon(word){
